@@ -1,4 +1,4 @@
-package com.recruit.common;
+package com.recruit.airecruitsystem.common;
 
 import lombok.Data;
 
