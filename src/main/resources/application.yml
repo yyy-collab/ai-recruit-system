@@ -1,0 +1,25 @@
+server:
+  port: 8080  # 端口
+  servlet:
+    context-path: /api
+
+spring:
+  # ?????
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ai_recruit?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root  # 你的用户名
+    password: root  # 你的密码
+
+  # 文件上传
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+# MyBatis
+  mybatis:
+    mapper-locations: classpath:mapper/*.xml
+    type-aliases-package: com.recruit.entity
+    configuration:
+      map-underscore-to-camel-case: true
