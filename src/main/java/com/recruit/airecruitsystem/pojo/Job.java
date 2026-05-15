@@ -1,4 +1,4 @@
-package com.example.resumefilter.entity;
+package com.recruit.airecruitsystem.pojo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
