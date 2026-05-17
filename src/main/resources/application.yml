@@ -23,3 +23,19 @@ spring:
     type-aliases-package: com.recruit.entity
     configuration:
       map-underscore-to-camel-case: true
+
+  # Redis
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    database: 0
+    timeout: 3000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+  cache:
+      type: redis
+      redis:
+        time-to-live: 7d #默认缓存过期时间7天

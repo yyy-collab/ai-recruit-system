@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ai-recruit-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ai_recruit
+      TZ: Asia/Shanghai
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+    restart: always
+    networks:
+      - ai-recruit-network
+
+  redis:
+    image: redis:6-alpine
+    container_name: ai-recruit-redis
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - ai-recruit-network
+
+  app:
+    build: .
+    container_name: ai-recruit-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ai_recruit?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+    restart: always
+    networks:
+      - ai-recruit-network
+
+networks:
+  ai-recruit-network:
+    driver: bridge

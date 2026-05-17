@@ -1,0 +1,10 @@
+.git
+.idea
+.vscode
+target/
+*.log
+node_modules/
+*.md
+*.iml
+.idea/
+*.class
