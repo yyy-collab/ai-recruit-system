@@ -42,7 +42,7 @@ AI招聘猎头系统-团队使用
     yaml
     spring:
       datasource:
-        url: jdbc:mysql://localhost:3306/recruit_ai?useSSL=false&serverTimezone=Asia/Shanghai
+        url: jdbc:mysql://localhost:3306/ai_recruit?useSSL=false&serverTimezone=Asia/Shanghai
         username: root
         password: 你的密码
     file:
