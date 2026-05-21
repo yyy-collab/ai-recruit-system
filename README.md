@@ -59,7 +59,7 @@ curl http://localhost:8080/test/ping
 应返回 {"code":0,"msg":"操作成功","data":"pong"}
 
 ### 6.项目结构
-src/main/java/com.recruit.ai_recruitsystem
+src/main/java/com.recruit.airecruitsystem
 ├── config          # CORS、拦截器、静态资源映射
 ├── controller      # 控制器（seeker/hr/common）
 ├── service         # 业务逻辑接口与实现

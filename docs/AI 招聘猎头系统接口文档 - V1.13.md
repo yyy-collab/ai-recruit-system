@@ -6,7 +6,7 @@
 
 2. 所有接口统一使用 `application/json` 格式提交请求参数（文件上传接口除外，使用 `multipart/form-data`）
 
-3. 基础 URL: `https://api.recruit-ai.com/v1`
+3. 基础 URL: `http://localhost:8080`
 
 4. **角色区分机制**：系统首页先选择 "求职者" 或 "HR" 角色，再进入对应登录 / 注册页面，后端通过接口路径前缀 (`/seeker`/`/hr`) 区分用户角色
 

@@ -1,0 +1,1442 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AI 招聘猎头系统 API",
+    "description": "基于 HanLP + TF-IDF + 余弦相似度的智能招聘系统",
+    "version": "1.13",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "生产环境"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "CommonResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "0成功，其他见错误码"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "nullable": true
+          }
+        }
+      },
+      "SeekerRegisterRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 16,
+            "pattern": "^[a-zA-Z0-9_]{5,16}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 16,
+            "pattern": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,16}$"
+          }
+        }
+      },
+      "SeekerLoginRequest": {
+        "type": "object",
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "SeekerUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "real_name": { "type": "string", "minLength": 2, "maxLength": 20 },
+          "avatar_url": { "type": "string" },
+          "phone": { "type": "string", "pattern": "^1[3-9]\\d{9}$" },
+          "email": { "type": "string", "format": "email" },
+          "age": { "type": "integer", "minimum": 16, "maximum": 65 },
+          "address": { "type": "string" },
+          "edu_back": { "type": "string", "enum": ["专科", "本科", "硕士", "博士"] },
+          "alma_mater": { "type": "string" },
+          "state": { "type": "string", "enum": ["在职", "离职", "应届毕业生"] },
+          "ex_postion": { "type": "string" },
+          "ex_city": { "type": "string" },
+          "ex_salary_min": { "type": "integer" },
+          "ex_salary_max": { "type": "integer" }
+        }
+      },
+      "UpdatePwdRequest": {
+        "type": "object",
+        "required": ["old_pwd", "new_pwd", "re_pwd"],
+        "properties": {
+          "old_pwd": { "type": "string" },
+          "new_pwd": { "type": "string", "pattern": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,16}$" },
+          "re_pwd": { "type": "string" }
+        }
+      },
+      "ResetPwdRequest": {
+        "type": "object",
+        "required": ["username", "email", "code", "new_pwd", "re_pwd"],
+        "properties": {
+          "username": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "code": { "type": "string", "minLength": 6, "maxLength": 6 },
+          "new_pwd": { "type": "string" },
+          "re_pwd": { "type": "string" }
+        }
+      },
+      "JobAddRequest": {
+        "type": "object",
+        "required": ["job_name", "job_desc", "requirement", "keywords"],
+        "properties": {
+          "job_name": { "type": "string" },
+          "job_desc": { "type": "string" },
+          "requirement": { "type": "string" },
+          "keywords": { "type": "string", "description": "逗号分隔" },
+          "salary": { "type": "string", "example": "15-25K" },
+          "work_address": { "type": "string" },
+          "work_experience": { "type": "string", "example": "3-5年" }
+        }
+      },
+      "JobUpdateRequest": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": { "type": "integer" },
+          "job_name": { "type": "string" },
+          "job_desc": { "type": "string" },
+          "requirement": { "type": "string" },
+          "keywords": { "type": "string" },
+          "salary": { "type": "string" },
+          "work_address": { "type": "string" },
+          "work_experience": { "type": "string" }
+        }
+      },
+      "ChangeJobStatusRequest": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "integer" },
+          "status": { "type": "integer", "enum": [0, 1], "description": "1上线0下线" }
+        }
+      },
+      "DeliveryAddRequest": {
+        "type": "object",
+        "required": ["job_id"],
+        "properties": {
+          "job_id": { "type": "integer" }
+        }
+      },
+      "DeliveryUpdateStatusRequest": {
+        "type": "object",
+        "required": ["delivery_id", "status"],
+        "properties": {
+          "delivery_id": { "type": "integer" },
+          "status": { "type": "integer", "enum": [0, 1, 2], "description": "0待处理1通过2淘汰" },
+          "comment": { "type": "string" }
+        }
+      },
+      "BatchUpdateStatusRequest": {
+        "type": "object",
+        "required": ["delivery_ids", "status"],
+        "properties": {
+          "delivery_ids": { "type": "array", "items": { "type": "integer" } },
+          "status": { "type": "integer", "enum": [0, 1, 2] },
+          "reject_reason": { "type": "string" }
+        }
+      },
+      "SendInterviewRequest": {
+        "type": "object",
+        "required": ["delivery_id", "interview_date", "interview_time", "interview_type", "interview_round", "interview_address", "contact_name", "contact_phone"],
+        "properties": {
+          "delivery_id": { "type": "integer" },
+          "interview_date": { "type": "string", "format": "date" },
+          "interview_time": { "type": "string", "pattern": "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$" },
+          "interview_type": { "type": "string", "enum": ["线上面试", "现场面试", "电话面试"] },
+          "interview_round": { "type": "string", "enum": ["初试", "复试", "终试"] },
+          "interview_address": { "type": "string" },
+          "contact_name": { "type": "string" },
+          "contact_phone": { "type": "string", "pattern": "^1[3-9]\\d{9}$" },
+          "remark": { "type": "string" }
+        }
+      },
+      "HandleInterviewRequest": {
+        "type": "object",
+        "required": ["message_id", "status"],
+        "properties": {
+          "message_id": { "type": "integer" },
+          "status": { "type": "integer", "enum": [1, 2], "description": "1接受2拒绝" },
+          "reject_reason": { "type": "string" }
+        }
+      },
+      "SegmentRequest": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string", "maxLength": 5000 }
+        }
+      },
+      "KeywordExtractRequest": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string", "enum": ["text", "resume", "job"] },
+          "content": { "type": "string" },
+          "resume_id": { "type": "integer" },
+          "job_id": { "type": "integer" },
+          "limit": { "type": "integer", "default": 10, "maximum": 20 }
+        }
+      },
+      "MatchCalculateRequest": {
+        "type": "object",
+        "required": ["job_id", "resume_id"],
+        "properties": {
+          "job_id": { "type": "integer" },
+          "resume_id": { "type": "integer" }
+        }
+      },
+      "RecalculateMatchRequest": {
+        "type": "object",
+        "required": ["delivery_id"],
+        "properties": {
+          "delivery_id": { "type": "integer" }
+        }
+      },
+      "VerifyCodeRequest": {
+        "type": "object",
+        "required": ["email", "type"],
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "type": { "type": "string", "enum": ["seeker_reset", "hr_reset"] }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/seeker/register": {
+      "post": {
+        "summary": "求职者注册",
+        "operationId": "seekerRegister",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SeekerRegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" },
+                "example": {
+                  "code": 0,
+                  "msg": "注册成功，请登录后完善个人信息",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/login": {
+      "post": {
+        "summary": "求职者登录",
+        "operationId": "seekerLogin",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SeekerLoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "msg": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string" },
+                        "expires_in": { "type": "integer" },
+                        "is_info_complete": { "type": "boolean" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/refreshToken": {
+      "post": {
+        "summary": "刷新求职者JWT令牌",
+        "operationId": "seekerRefreshToken",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "msg": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string" },
+                        "expires_in": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/userInfo": {
+      "get": {
+        "summary": "获取当前求职者信息",
+        "operationId": "seekerUserInfo",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/update": {
+      "put": {
+        "summary": "更新求职者信息",
+        "operationId": "seekerUpdate",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SeekerUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/updatePwd": {
+      "patch": {
+        "summary": "求职者修改密码",
+        "operationId": "seekerUpdatePwd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdatePwdRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/logout": {
+      "post": {
+        "summary": "求职者登出",
+        "operationId": "seekerLogout",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/delete": {
+      "delete": {
+        "summary": "求职者账号注销",
+        "operationId": "seekerDelete",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["password"],
+                "properties": {
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/resetPwd": {
+      "post": {
+        "summary": "求职者重置密码（未登录）",
+        "operationId": "seekerResetPwd",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResetPwdRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/register": {
+      "post": {
+        "summary": "HR注册",
+        "operationId": "hrRegister",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SeekerRegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/login": {
+      "post": {
+        "summary": "HR登录",
+        "operationId": "hrLogin",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SeekerLoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "msg": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string" },
+                        "expires_in": { "type": "integer" },
+                        "is_info_complete": { "type": "boolean" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/refreshToken": {
+      "post": {
+        "summary": "刷新HR JWT令牌",
+        "operationId": "hrRefreshToken",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": { "type": "integer" },
+                    "msg": { "type": "string" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": { "type": "string" },
+                        "expires_in": { "type": "integer" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/userInfo": {
+      "get": {
+        "summary": "获取当前HR信息",
+        "operationId": "hrUserInfo",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/update": {
+      "put": {
+        "summary": "更新HR信息",
+        "operationId": "hrUpdate",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "real_name": { "type": "string" },
+                  "avatar_url": { "type": "string" },
+                  "company_name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "phone": { "type": "string", "pattern": "^1[3-9]\\d{9}$" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/updatePwd": {
+      "patch": {
+        "summary": "HR修改密码",
+        "operationId": "hrUpdatePwd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdatePwdRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/statistics": {
+      "get": {
+        "summary": "HR招聘数据统计",
+        "operationId": "hrStatistics",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/logout": {
+      "post": {
+        "summary": "HR登出",
+        "operationId": "hrLogout",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/resetPwd": {
+      "post": {
+        "summary": "HR重置密码（未登录）",
+        "operationId": "hrResetPwd",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResetPwdRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/job/add": {
+      "post": {
+        "summary": "HR发布岗位",
+        "operationId": "hrJobAdd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobAddRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/job/update": {
+      "put": {
+        "summary": "HR编辑岗位",
+        "operationId": "hrJobUpdate",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobUpdateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/job/changeStatus": {
+      "patch": {
+        "summary": "HR岗位上下线",
+        "operationId": "hrJobChangeStatus",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChangeJobStatusRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/job/myList": {
+      "get": {
+        "summary": "HR获取我的岗位列表",
+        "operationId": "hrJobMyList",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "pageNum", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 50 } },
+          { "name": "status", "in": "query", "schema": { "type": "integer", "enum": [0, 1] } },
+          { "name": "job_name", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/job/list": {
+      "get": {
+        "summary": "求职者岗位列表",
+        "operationId": "seekerJobList",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "pageNum", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 50 } },
+          { "name": "job_name", "in": "query", "schema": { "type": "string" } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["salary_desc", "时间降序", "匹配度降序"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/job/detail": {
+      "get": {
+        "summary": "求职者查看岗位详情",
+        "operationId": "seekerJobDetail",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "job_id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/job/delete": {
+      "delete": {
+        "summary": "HR删除岗位",
+        "operationId": "hrJobDelete",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resume/upload": {
+      "post": {
+        "summary": "简历文件上传（求职者）",
+        "operationId": "resumeUpload",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "doc/docx，≤20MB"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resume/ai/reparse": {
+      "post": {
+        "summary": "AI重新解析简历",
+        "operationId": "resumeAiReparse",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["resume_id"],
+                "properties": {
+                  "resume_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resume/myList": {
+      "get": {
+        "summary": "获取我的简历列表（求职者）",
+        "operationId": "resumeMyList",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resume/ai/detail": {
+      "get": {
+        "summary": "获取简历AI解析详情",
+        "operationId": "resumeAiDetail",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "resume_id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resume/delete": {
+      "delete": {
+        "summary": "删除简历（求职者）",
+        "operationId": "resumeDelete",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "resume_id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resume/preview": {
+      "get": {
+        "summary": "简历在线预览",
+        "operationId": "resumePreview",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "resume_id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/delivery/add": {
+      "post": {
+        "summary": "求职者投递岗位",
+        "operationId": "seekerDeliveryAdd",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeliveryAddRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/delivery/myList": {
+      "get": {
+        "summary": "求职者查看我的投递记录",
+        "operationId": "seekerDeliveryMyList",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "pageNum", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 50 } },
+          { "name": "status", "in": "query", "schema": { "type": "integer", "enum": [0, 1, 2, 3] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/delivery/list": {
+      "get": {
+        "summary": "HR查看岗位投递列表",
+        "operationId": "hrDeliveryList",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "job_id", "in": "query", "required": true, "schema": { "type": "integer" } },
+          { "name": "pageNum", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 50 } },
+          { "name": "status", "in": "query", "schema": { "type": "integer", "enum": [0, 1, 2, 3] } },
+          { "name": "sort", "in": "query", "schema": { "type": "string", "enum": ["match_score_desc", "time_desc"] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/delivery/detail": {
+      "get": {
+        "summary": "HR查看投递详情",
+        "operationId": "hrDeliveryDetail",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "delivery_id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/delivery/updateStatus": {
+      "patch": {
+        "summary": "HR修改投递状态",
+        "operationId": "hrDeliveryUpdateStatus",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeliveryUpdateStatusRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/delivery/batchUpdateStatus": {
+      "patch": {
+        "summary": "HR批量更新投递状态",
+        "operationId": "hrDeliveryBatchUpdateStatus",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BatchUpdateStatusRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/common/file/upload": {
+      "post": {
+        "summary": "公共文件上传（头像等）",
+        "operationId": "commonFileUpload",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "type"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "type": { "type": "string", "enum": ["avatar"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/common/verify/code": {
+      "post": {
+        "summary": "获取邮箱验证码",
+        "operationId": "commonVerifyCode",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VerifyCodeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/interview/send": {
+      "post": {
+        "summary": "HR发送面试邀请",
+        "operationId": "hrInterviewSend",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SendInterviewRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/message/list": {
+      "get": {
+        "summary": "HR获取消息通知列表",
+        "operationId": "hrMessageList",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "pageNum", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 50 } },
+          { "name": "status", "in": "query", "schema": { "type": "integer", "enum": [0, 1, 2] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hr/message/detail": {
+      "get": {
+        "summary": "HR获取面试邀请详情",
+        "operationId": "hrMessageDetail",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "message_id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/message/list": {
+      "get": {
+        "summary": "求职者获取消息通知列表",
+        "operationId": "seekerMessageList",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "pageNum", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "pageSize", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 50 } },
+          { "name": "status", "in": "query", "schema": { "type": "integer", "enum": [0, 1, 2] } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/message/detail": {
+      "get": {
+        "summary": "求职者获取面试邀请详情",
+        "operationId": "seekerMessageDetail",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "message_id", "in": "query", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeker/interview/handle": {
+      "post": {
+        "summary": "求职者处理面试邀请",
+        "operationId": "seekerInterviewHandle",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/HandleInterviewRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/word/segment": {
+      "post": {
+        "summary": "AI中文分词（HanLP）",
+        "operationId": "aiWordSegment",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SegmentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/keyword/extract": {
+      "post": {
+        "summary": "AI关键词提取（TF-IDF）",
+        "operationId": "aiKeywordExtract",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/KeywordExtractRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/match/calculate": {
+      "post": {
+        "summary": "AI岗位-简历匹配度计算（余弦相似度）",
+        "operationId": "aiMatchCalculate",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MatchCalculateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/match/recalculate": {
+      "post": {
+        "summary": "AI重新计算投递匹配度",
+        "operationId": "aiMatchRecalculate",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RecalculateMatchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CommonResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
