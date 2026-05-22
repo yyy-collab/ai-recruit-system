@@ -1,5 +1,6 @@
 package com.recruit.airecruitsystem.interceptor;
 
+import com.recruit.airecruitsystem.mapper.TokenBlacklistMapper;
 import com.recruit.airecruitsystem.utils.JwtUtil;
 import com.recruit.airecruitsystem.utils.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,9 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Autowired
     private JwtUtil jwtUtil;
 
-    // 在请求处理前执行，返回true继续，false中断请求
+    @Autowired
+    private TokenBlacklistMapper tokenBlacklistMapper;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         // 预检请求（OPTIONS）直接放行，用于跨域
@@ -23,35 +26,51 @@ public class AuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        String token = request.getHeader("Authorization");
-        // 检查token是否存在且格式正确
-        if (token == null || !token.startsWith("Bearer ")) {
-            response.setStatus(401);   // 未授权
+        // 设置响应编码为 UTF-8，避免中文乱码
+        response.setContentType("application/json;charset=UTF-8");
+
+        // 1. 获取 Authorization 头
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"code\":401,\"msg\":\"未提供有效的认证令牌\"}");
             return false;
         }
 
-        token = token.substring(7);    // 去掉 "Bearer " 前缀
+        // 2. 提取纯 token（去掉 "Bearer " 前缀）
+        String token = authHeader.substring(7);
+
+        // 3. 黑名单检查
+        if (tokenBlacklistMapper.isBlacklisted(token)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"code\":10005,\"msg\":\"令牌已登出，请重新登录\"}");
+            return false;
+        }
+
+        // 4. 检查 token 是否过期
+        if (jwtUtil.isTokenExpired(token)) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"code\":10005,\"msg\":\"令牌已过期\"}");
+            return false;
+        }
+
+        // 5. 解析用户信息存入 ThreadLocal
         try {
-            // 检查token是否过期
-            if (jwtUtil.isTokenExpired(token)) {
-                response.setStatus(401);
-                return false;
-            }
-            // 解析用户信息存入ThreadLocal，后续Controller可通过UserContext获取
             Integer userId = jwtUtil.getUserId(token);
             String role = jwtUtil.getRole(token);
             UserContext.setUserId(userId);
             UserContext.setRole(role);
             return true;
         } catch (Exception e) {
-            response.setStatus(401);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("{\"code\":10005,\"msg\":\"无效令牌\"}");
             return false;
         }
     }
 
-    // 请求结束后清理ThreadLocal
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        // 请求结束后清理 ThreadLocal，防止内存泄漏
         UserContext.clear();
     }
 }

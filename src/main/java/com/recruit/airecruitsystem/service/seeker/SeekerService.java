@@ -1,65 +1,39 @@
 package com.recruit.airecruitsystem.service.seeker;
 
+import com.recruit.airecruitsystem.dto.seeker.SeekerUpdateRequest;
+import com.recruit.airecruitsystem.vo.common.TokenRefreshVO;
+import com.recruit.airecruitsystem.vo.seeker.SeekerInfoVO;
+import com.recruit.airecruitsystem.vo.seeker.SeekerLoginVO;
 
-import com.recruit.airecruitsystem.constant.ResultCode;
-import com.recruit.airecruitsystem.mapper.SeekerMapper;
-import com.recruit.airecruitsystem.pojo.Seeker;
-import com.recruit.airecruitsystem.utils.PasswordEncoder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
+/**
+ * 求职者业务逻辑接口
+ */
 
-@Service
-public class SeekerService {
+public interface SeekerService {
 
-    @Autowired
-    private SeekerMapper seekerMapper;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    //求职者注册
+    int register(String username,String password);
 
     /*
-     * 求职者注册
-     * @param username 用户名
-     * @param password 密码（明文）
-     * @return 错误码，0表示成功
-     */
+    * @param vo 用于封装返回数据（token、有效期、信息是否完善)
+    * */
+    int login(String username, String password, SeekerLoginVO vo);
 
-    public int register(String username,String password){
+    //刷新令牌
+    int refreshToken(String oldToken, TokenRefreshVO vo);
 
-        //校验用户名和密码是否为空
-        if(!StringUtils.hasText(username)||!StringUtils.hasText(password)){
-            return ResultCode.PARAM_ERROR;
-        }
+    //获取用户详情信息
+    SeekerInfoVO getCurrentUserInfo(Integer seekerId);
 
-        // 2. 格式校验（用户名：5~16位字母数字下划线）
-        if (!username.matches("^[a-zA-Z0-9_]{5,16}$")) {
-            return ResultCode.PARAM_ERROR;
-        }
-        // 密码：8~16位字母数字组合
-        if (!password.matches("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,16}$")) {
-            return ResultCode.PARAM_ERROR;
-        }
+    //更新求职者信息
+    int updateSeekerInfo(Integer seekerId, SeekerUpdateRequest request);
 
-        // 3. 检查用户名是否已存在
-        Seeker existing = seekerMapper.findByUsername(username);
-        if (existing != null) {
-            return ResultCode.USERNAME_EXIST;
-        }
+    //更新密码
+    int updatePassword(Integer seekerId, String oldPwd, String newPwd, String rePwd);
 
-        // 4. 加密密码
-        String encodedPwd = passwordEncoder.encode(password);
+    //用户登出(将token加入黑名单)
+    int logout(String token);
 
-        // 5. 创建Seeker对象并插入
-        Seeker seeker = new Seeker();
-        seeker.setUsername(username);
-        seeker.setPassword(encodedPwd);
-        // create_time, update_time 由数据库自动填充
-        int rows = seekerMapper.insert(seeker);
-        if (rows > 0) {
-            return ResultCode.SUCCESS;
-        } else {
-            return ResultCode.PARAM_ERROR;
-        }
-    }
+    //注销账号
+    int deleteAccount(Integer seekerId, String password, String token);
 }

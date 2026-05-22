@@ -14,7 +14,7 @@ spring:
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml   # MyBatis的XML映射文件存放位置
-  type-aliases-package: com.recruit.ai_recruitsystem.entity  # 实体类包，用于简化XML中的类型引用
+  type-aliases-package: com.recruit.airecruitsystem.pojo  # 实体类包，用于简化XML中的类型引用
   configuration:
     map-underscore-to-camel-case: true   # 数据库下划线字段自动映射为实体类驼峰属性（如 real_name -> realName）
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 打印SQL日志到控制台，便于调试

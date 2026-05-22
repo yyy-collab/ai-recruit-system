@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.recruit.airecruitsystem.mapper.SeekerMapper">
+
+<!--    更新求职者信息-->
+    <update id="updateSeeker" parameterType="com.recruit.airecruitsystem.pojo.Seeker">
+        UPDATE seeker
+        <set>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="age != null">age = #{age},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="eduBack != null">edu_back = #{eduBack},</if>
+            <if test="almaMater != null">alma_mater = #{almaMater},</if>
+            <if test="state != null">state = #{state},</if>
+            <if test="exPosition != null">ex_position = #{exPosition},</if>
+            <if test="exCity != null">ex_city = #{exCity},</if>
+            <if test="exSalaryMin != null">ex_salary_min = #{exSalaryMin},</if>
+            <if test="exSalaryMax != null">ex_salary_max = #{exSalaryMax},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+</mapper>
