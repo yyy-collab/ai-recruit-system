@@ -8,13 +8,16 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class ResourceConfig implements WebMvcConfigurer {
 
-    @Value("${file.upload-dir}")   // 读取配置的上传目录
-    private String uploadDir;
+    @Value("${file.upload.path}")
+    private String uploadPath;
+
+    @Value("${file.upload.access-path}")
+    private String accessPath;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 将 /uploads/** 的请求映射到本地文件目录，实现通过URL访问上传的文件
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadDir);
+        // 映射 /uploads/** 到本地目录
+        registry.addResourceHandler(accessPath + "**")
+                .addResourceLocations("file:" + uploadPath);
     }
 }

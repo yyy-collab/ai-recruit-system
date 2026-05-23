@@ -38,15 +38,8 @@ AI招聘猎头系统-团队使用
 
 
 ### 3. 修改配置
-    编辑 src/main/resources/application.yml：
-    yaml
-    spring:
-      datasource:
-        url: jdbc:mysql://localhost:3306/ai_recruit?useSSL=false&serverTimezone=Asia/Shanghai
-        username: root
-        password: 你的密码
-    file:
-      upload-dir: D:/upload/   # 文件上传目录，改为实际路径
+    将application.yml.example复制到resources/application.yml,修改相关配置信息
+
 ### 4. 启动项目
     ```bash
     mvn clean install

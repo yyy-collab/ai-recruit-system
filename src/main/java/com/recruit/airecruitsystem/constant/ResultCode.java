@@ -27,4 +27,5 @@ public class ResultCode {
     public static final int REJECT_REASON_EMPTY = 10020;      // 拒绝原因不能为空
     public static final int RESUME_HAS_DELIVERY = 10021;      // 简历已存在投递记录，无法删除
     public static final int EMAIL_NOT_REGISTERED = 10022;     // 邮箱未注册或验证码错误/过期
+    public static final int NEED_RELOGIN = 10023;   // 密码修改成功，需要重新登录
 }

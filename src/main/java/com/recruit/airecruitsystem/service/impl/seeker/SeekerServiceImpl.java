@@ -2,8 +2,10 @@ package com.recruit.airecruitsystem.service.impl.seeker;
 
 import com.recruit.airecruitsystem.constant.ResultCode;
 import com.recruit.airecruitsystem.dto.seeker.SeekerUpdateRequest;
+import com.recruit.airecruitsystem.mapper.EmailVerifyCodeMapper;
 import com.recruit.airecruitsystem.mapper.SeekerMapper;
 import com.recruit.airecruitsystem.mapper.TokenBlacklistMapper;
+import com.recruit.airecruitsystem.pojo.EmailVerifyCode;
 import com.recruit.airecruitsystem.pojo.Seeker;
 import com.recruit.airecruitsystem.pojo.TokenBlacklist;
 import com.recruit.airecruitsystem.service.seeker.SeekerService;
@@ -38,6 +40,9 @@ public class SeekerServiceImpl implements SeekerService {
 
     @Autowired
     private TokenBlacklistMapper tokenBlacklistMapper;
+
+    @Autowired
+    private EmailVerifyCodeMapper emailVerifyCodeMapper;
 
     /**
      * 求职者注册
@@ -253,33 +258,54 @@ public class SeekerServiceImpl implements SeekerService {
         return rows > 0 ? ResultCode.SUCCESS : ResultCode.PARAM_ERROR;
     }
 
+    @Transactional
     @Override
-    public int updatePassword(Integer seekerId, String oldPwd, String newPwd, String rePwd) {
-        // 1. 非空校验
+    public int updatePassword(Integer seekerId, String oldPwd, String newPwd, String rePwd, String token) {
+        // 非空校验
         if (oldPwd == null || newPwd == null || rePwd == null) {
             return ResultCode.PARAM_ERROR;
         }
-        // 2. 新密码与确认密码一致性校验
+        // 新密码与确认密码一致性
         if (!newPwd.equals(rePwd)) {
-            return ResultCode.PWD_NOT_MATCH;  // 10009
+            return ResultCode.PWD_NOT_MATCH;
         }
-        // 3. 新密码格式校验（正则）
+        // 新密码格式校验
         if (!newPwd.matches("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,16}$")) {
             return ResultCode.PARAM_ERROR;
         }
-        // 4. 查询用户
+        // 查询用户
         Seeker seeker = seekerMapper.findById(seekerId);
         if (seeker == null) {
             return ResultCode.NOT_FOUND;
         }
-        // 5. 校验旧密码
+        // 校验原密码
         if (!passwordEncoder.matches(oldPwd, seeker.getPassword())) {
-            return ResultCode.OLD_PWD_ERROR;  // 10008
+            return ResultCode.OLD_PWD_ERROR;
         }
-        // 6. 加密新密码并更新
+
+        // 加密新密码并更新数据库
         String encodedNewPwd = passwordEncoder.encode(newPwd);
-        int rows = seekerMapper.updatePassword(seekerId, encodedNewPwd);
-        return rows > 0 ? ResultCode.SUCCESS : ResultCode.PARAM_ERROR;
+        int rows = seekerMapper.updatePasswordById(seekerId, encodedNewPwd);
+        if (rows > 0) {
+            // 将当前 Token 加入黑名单，使其立即失效
+            try {
+                Claims claims = jwtUtil.parseToken(token);
+                Date expirationDate = claims.getExpiration();
+                LocalDateTime expireTime = expirationDate.toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDateTime();
+                TokenBlacklist blacklist = TokenBlacklist.builder()
+                        .token(token)
+                        .expireTime(expireTime)
+                        .build();
+                tokenBlacklistMapper.insert(blacklist);
+            } catch (Exception e) {
+                // 记录日志，但不影响主流程（可以抛出异常，但这里选择继续）
+                // log.error("Token 加入黑名单失败", e);
+            }
+            return ResultCode.NEED_RELOGIN;   // 通知前端需要重新登录
+        }
+        return ResultCode.PARAM_ERROR;
     }
 
     @Override
@@ -336,6 +362,34 @@ public class SeekerServiceImpl implements SeekerService {
 
         // 4. 删除求职者（数据库外键 ON DELETE CASCADE 自动删除简历、投递等）
         int rows = seekerMapper.deleteById(seekerId);
+        return rows > 0 ? ResultCode.SUCCESS : ResultCode.PARAM_ERROR;
+    }
+
+    @Override
+    public int resetPassword(String username, String email, String code, String newPwd, String rePwd) {
+        // 1. 新密码与确认密码一致性校验
+        if (!newPwd.equals(rePwd)) {
+            return ResultCode.PWD_NOT_MATCH;   // 10009
+        }
+
+        // 2. 根据用户名和邮箱查询用户（验证该用户是否存在）
+        Seeker seeker = seekerMapper.selectByUsernameAndEmail(username, email);
+        if (seeker == null) {
+            return ResultCode.EMAIL_NOT_REGISTERED;   // 10022 邮箱未注册或不匹配
+        }
+
+        // 3. 校验验证码（查找最新且未过期的记录）
+        EmailVerifyCode validCode = emailVerifyCodeMapper.selectLatestValid(email, "seeker_reset");
+        if (validCode == null || !validCode.getCode().equals(code)) {
+            return ResultCode.EMAIL_NOT_REGISTERED;   // 验证码错误或已过期
+        }
+
+        // 4. 验证码使用后立即删除，防止重用
+        emailVerifyCodeMapper.deleteById(validCode.getId());
+
+        // 5. 加密新密码并更新
+        String encodedNewPwd = passwordEncoder.encode(newPwd);
+        int rows = seekerMapper.updatePasswordById(seeker.getId(), encodedNewPwd);
         return rows > 0 ? ResultCode.SUCCESS : ResultCode.PARAM_ERROR;
     }
 }
