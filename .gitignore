@@ -17,4 +17,4 @@ bin/
 Thumbs.db
 
 # 忽略本地配置文件
-**/application.yml
+application.yml
