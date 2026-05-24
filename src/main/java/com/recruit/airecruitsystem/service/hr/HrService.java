@@ -29,4 +29,7 @@ public interface HrService {
 
     //重置密码
     int resetPassword(String username, String email, String code, String newPwd, String rePwd);
+
+    //注销账号
+    int deleteAccount(Integer hrId, String password, String token);
 }

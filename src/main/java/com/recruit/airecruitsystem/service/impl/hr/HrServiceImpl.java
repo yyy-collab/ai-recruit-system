@@ -3,6 +3,7 @@ package com.recruit.airecruitsystem.service.impl.hr;
 import com.recruit.airecruitsystem.constant.ResultCode;
 import com.recruit.airecruitsystem.mapper.EmailVerifyCodeMapper;
 import com.recruit.airecruitsystem.mapper.HrMapper;
+import com.recruit.airecruitsystem.mapper.JobMapper;
 import com.recruit.airecruitsystem.mapper.TokenBlacklistMapper;
 import com.recruit.airecruitsystem.pojo.EmailVerifyCode;
 import com.recruit.airecruitsystem.pojo.Hr;
@@ -16,6 +17,7 @@ import com.recruit.airecruitsystem.utils.JwtUtil;
 import com.recruit.airecruitsystem.utils.PasswordEncoder;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ import java.util.Date;
  * HR 业务逻辑实现类
  * 提供注册、登录、刷新Token、信息管理、密码修改、登出、重置密码等功能
  */
+@Slf4j
 @Service
 public class HrServiceImpl implements HrService {
 
@@ -46,6 +49,9 @@ public class HrServiceImpl implements HrService {
 
     @Autowired
     private EmailVerifyCodeMapper emailVerifyCodeMapper;
+
+    @Autowired
+    private JobMapper jobMapper;
 
     /**
      * HR 注册
@@ -336,6 +342,48 @@ public class HrServiceImpl implements HrService {
         // 加密并更新密码
         String encodedNewPwd = passwordEncoder.encode(newPwd);
         int rows = hrMapper.updatePasswordById(hr.getId(), encodedNewPwd);
+        return rows > 0 ? ResultCode.SUCCESS : ResultCode.PARAM_ERROR;
+    }
+
+
+    @Override
+    @Transactional
+    public int deleteAccount(Integer hrId, String password, String token) {
+        // 1. 查询 HR 是否存在
+        Hr hr = hrMapper.selectById(hrId);
+        if (hr == null) {
+            return ResultCode.NOT_FOUND;
+        }
+
+        // 2. 校验密码
+        if (!passwordEncoder.matches(password, hr.getPassword())) {
+            return ResultCode.LOGIN_ERROR;
+        }
+
+        // 3. 业务校验：是否存在上线状态的岗位（建议先下线岗位或无法注销）
+        int onlineJobs = hrMapper.countOnlineJobs(hrId);
+        if (onlineJobs > 0) {
+            return ResultCode.HR_HAS_ONLINE_JOBS;   // 存在上线岗位，不允许注销（可提示请先下线所有岗位）
+        }
+
+        // 4. 将当前 Token 加入黑名单
+        try {
+            Date expirationDate = jwtUtil.parseToken(token).getExpiration();
+            LocalDateTime expireTime = expirationDate.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDateTime();
+            TokenBlacklist blacklist = TokenBlacklist.builder()
+                    .token(token)
+                    .expireTime(expireTime)
+                    .build();
+            tokenBlacklistMapper.insert(blacklist);
+        } catch (Exception e) {
+            // 记录日志，不中断注销流程
+            log.error("HR注销时Token加入黑名单失败", e);
+        }
+
+        // 5. 删除 HR（外键级联删除岗位、投递等）
+        int rows = hrMapper.deleteById(hrId);
         return rows > 0 ? ResultCode.SUCCESS : ResultCode.PARAM_ERROR;
     }
 }

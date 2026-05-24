@@ -1,18 +1,26 @@
 package com.recruit.airecruitsystem.controller.hr;
 
 
+import com.github.pagehelper.PageInfo;
 import com.recruit.airecruitsystem.constant.ResultCode;
 import com.recruit.airecruitsystem.dto.hr.*;
 import com.recruit.airecruitsystem.result.Result;
+import com.recruit.airecruitsystem.service.common.InterviewMessageService;
 import com.recruit.airecruitsystem.service.hr.HrService;
 import com.recruit.airecruitsystem.utils.JwtUtil;
+import com.recruit.airecruitsystem.vo.common.PageResult;
 import com.recruit.airecruitsystem.vo.common.TokenRefreshVO;
 import com.recruit.airecruitsystem.vo.hr.HrInfoVO;
 import com.recruit.airecruitsystem.vo.hr.HrLoginVO;
+import com.recruit.airecruitsystem.vo.hr.HrMessageDetailVO;
+import com.recruit.airecruitsystem.vo.hr.HrMessageListItemVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/hr")
@@ -23,6 +31,9 @@ public class HrController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private InterviewMessageService interviewMessageService;
 
     // 注册
     @PostMapping("/register")
@@ -176,5 +187,69 @@ public class HrController {
             default:
                 return Result.error(ResultCode.PARAM_ERROR, "重置失败");
         }
+    }
+
+    /**
+     * HR 注销账号
+     * @param request 请求体（含密码）
+     * @param authorization 请求头中的 Authorization
+     * @return Result
+     */
+    @DeleteMapping("/delete")
+    public Result<String> deleteAccount(@Valid @RequestBody HrDeleteRequest request,
+                                      @RequestHeader(value = "Authorization", required = false) String authorization) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return Result.error(ResultCode.PARAM_ERROR, "未提供有效的认证令牌");
+        }
+        String token = authorization.substring(7);
+        Integer hrId;
+        try {
+            // 简化：直接用 jwtUtil.getUserId(token)
+            hrId = jwtUtil.getUserId(token);
+        } catch (Exception e) {
+            return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
+        }
+
+        int code = hrService.deleteAccount(hrId, request.getPassword(), token);
+        switch (code) {
+            case ResultCode.SUCCESS:
+                return Result.success("账号注销成功");
+            case ResultCode.LOGIN_ERROR:
+                return Result.error(ResultCode.LOGIN_ERROR, "密码错误，注销失败");
+            case ResultCode.NOT_FOUND:
+                return Result.error(ResultCode.NOT_FOUND, "用户不存在");
+            case ResultCode.HR_HAS_ONLINE_JOBS:
+                return Result.error(ResultCode.HR_HAS_ONLINE_JOBS, "请先下线所有岗位后再注销账号");
+            default:
+                return Result.error(ResultCode.PARAM_ERROR, "注销失败");
+        }
+    }
+
+
+    //发送面试邀请
+    @PostMapping("/interview/send")
+    public Result<Void> sendInterview(@Valid @RequestBody SendInterviewRequest request, HttpServletRequest httpRequest) {
+        Integer hrId = jwtUtil.getUserIdFromRequest(httpRequest);
+        int code = interviewMessageService.sendInterview(hrId, request);
+        return code == ResultCode.SUCCESS ? Result.success("面试邀请发送成功", null) : Result.error(ResultCode.PARAM_ERROR, "发送失败");
+    }
+
+    //hr消息列表
+    @GetMapping("/message/list")
+    public Result<PageInfo<HrMessageListItemVO>> getHrMessageList(
+            @RequestParam(required = false) Integer status,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            HttpServletRequest httpRequest) {
+        Integer hrId = jwtUtil.getUserIdFromRequest(httpRequest);
+        PageInfo<HrMessageListItemVO> pageInfo = interviewMessageService.getHrMessageList(hrId, status, pageNum, pageSize);
+        return Result.success("操作成功", pageInfo);
+    }
+
+    @GetMapping("/message/detail")
+    public Result<HrMessageDetailVO> getHrMessageDetail(@RequestParam("message_id") Integer messageId, HttpServletRequest httpRequest) {
+        Integer hrId = jwtUtil.getUserIdFromRequest(httpRequest);
+        HrMessageDetailVO vo = interviewMessageService.getHrMessageDetail(hrId, messageId);
+        return vo == null ? Result.error(ResultCode.INTERVIEW_NOT_EXIST, "面试邀请不存在或无权限") : Result.success("操作成功", vo);
     }
 }

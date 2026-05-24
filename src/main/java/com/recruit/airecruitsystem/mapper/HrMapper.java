@@ -35,6 +35,15 @@ public interface HrMapper {
     @Update("UPDATE hr SET password = #{password}, update_time = NOW() WHERE id = #{id}")
     int updatePasswordById(@Param("id") Integer id, @Param("password") String encodedPwd);
 
+
+    //删除 HR 账号（由数据库外键级联删除关联数据）
+    @Delete("DELETE FROM hr WHERE id = #{id}")
+    int deleteById(Integer id);
+
+    //查询该 HR 名下是否存在上线状态的岗位
+    @Select("SELECT COUNT(*) FROM job WHERE hr_id = #{hrId} AND status = 1")
+    int countOnlineJobs(Integer hrId);
+
     // 增加刷新次数
     @Update("UPDATE hr SET refresh_count = refresh_count + 1, last_refresh_time = NOW() WHERE id = #{id}")
     int incrementRefreshCount(Integer id);

@@ -28,4 +28,5 @@ public class ResultCode {
     public static final int RESUME_HAS_DELIVERY = 10021;      // 简历已存在投递记录，无法删除
     public static final int EMAIL_NOT_REGISTERED = 10022;     // 邮箱未注册或验证码错误/过期
     public static final int NEED_RELOGIN = 10023;   // 密码修改成功，需要重新登录
+    public static final int HR_HAS_ONLINE_JOBS = 10024; // HR名下还有上线岗位，无法注销
 }

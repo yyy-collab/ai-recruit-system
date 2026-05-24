@@ -46,3 +46,9 @@ file:
 logging:
   level:
     com.recruit: DEBUG       # 设置我们自己包的日志级别为DEBUG，便于观察运行细节
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+  params: count=countSql
