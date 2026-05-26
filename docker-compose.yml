@@ -36,7 +36,7 @@ services:
       - mysql
       - redis
     environment:
-      # 数据库连接信息（覆盖 application.yml 中的配置）
+      # 数据库连接信息（覆盖 application.yml.example 中的配置）
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ai_recruit?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root123
