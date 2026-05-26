@@ -5,7 +5,7 @@ USE ai_recruit;
 -- ----------------------------
 -- 1. 求职者表 (seeker)
 -- ----------------------------
-CREATE TABLE `seeker` (
+CREATE TABLE `seeker`(
                           `id` INT NOT NULL AUTO_INCREMENT COMMENT '求职者ID',
                           `username` VARCHAR(16) NOT NULL COMMENT '用户名，5~16位字母数字下划线',
                           `password` VARCHAR(255) NOT NULL COMMENT '加密密码',
