@@ -64,7 +64,6 @@ public class JobServiceImpl implements JobService {
         job.setWorkAddress(normalizeOptionalText(request.getWorkAddress()));
         job.setWorkExperience(normalizeOptionalText(request.getWorkExperience()));
         job.setStatus(1);
-        job.setDeleted(0);
         job.setDeliveryCount(0);
         jobMapper.insert(job);
 
@@ -157,7 +156,6 @@ public class JobServiceImpl implements JobService {
         Job job = new Job();
         job.setId(validJobId);
         job.setStatus(0);
-        job.setDeleted(1);
         jobMapper.updateSelective(job);
     }
 
@@ -171,7 +169,7 @@ public class JobServiceImpl implements JobService {
 
     private Job requireOwnedJob(Integer jobId, Integer hrId) {
         Job job = jobMapper.selectById(jobId);
-        if (job == null || Integer.valueOf(1).equals(job.getDeleted())) {
+        if (job == null ) {
             throw new BusinessException(ResultCode.NOT_FOUND, "岗位不存在");
         }
         if (!hrId.equals(job.getHrId())) {
