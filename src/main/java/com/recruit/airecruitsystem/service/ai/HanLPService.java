@@ -9,25 +9,18 @@ import java.util.List;
 
 @Service
 public class HanLPService {
+
     public List<String> segment(String text, boolean removeStopWords) {
         List<Term> termList = HanLP.segment(text);
-        // 存放最终的词语
-        List<String> resultList = new ArrayList<>();
-        // 循环遍历每一个分词结果
-        for (int i = 0; i < termList.size(); i++) {
-            Term term = termList.get(i);
+        List<String> result = new ArrayList<>();
+        for (Term term : termList) {
             String word = term.word;
-            // 判断是否需要过滤停用词
-            if (removeStopWords) {
-                // 不是停用词加入结果
-                if (!StopWordsLoader.StopWords.contains(word)) {
-                    resultList.add(word);
-                }
-            } else {
-                // 不过滤，直接加入
-                resultList.add(word);
+            // 如果需要过滤停用词，并且当前词是停用词，则跳过
+            if (removeStopWords && StopWordsLoader.isStopWord(word)) {
+                continue;
             }
+            result.add(word);
         }
-        return resultList;
+        return result;
     }
 }

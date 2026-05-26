@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: recruit-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123          # root 密码
+      MYSQL_DATABASE: ai_recruit             # 自动创建的数据库名
+    ports:
+      - "3306:3306"                          # 映射宿主机 3306 端口
+    volumes:
+      - mysql-data:/var/lib/mysql            # 数据持久化
+    networks:
+      - recruit-net
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: recruit-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - recruit-net
+    restart: unless-stopped
+
+  # 后端应用（Spring Boot）
+  backend:
+    build: .                                 # 使用当前目录的 Dockerfile 构建
+    container_name: recruit-backend
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      # 数据库连接信息（覆盖 application.yml 中的配置）
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ai_recruit?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      # 如果有其他环境变量（如 API Key），可以在这里加
+    ports:
+      - "8080:8080"
+    networks:
+      - recruit-net
+    restart: unless-stopped
+
+# 持久化卷
+volumes:
+  mysql-data:
+  redis-data:
+
+# 自定义网络
+networks:
+  recruit-net:
+    driver: bridge

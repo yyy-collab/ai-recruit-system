@@ -66,7 +66,7 @@ public class MatchCalculateService {
         return (dot / (Math.sqrt(normA) * Math.sqrt(normB))) * 100;
     }
 
-    // 微调加分（简单版）
+    // 微调加分
     private int getExtraScore(String jobText, String resumeText) {
         int extra = 0;
         if (jobText.contains("本科") && resumeText.contains("本科")) extra += 3;
