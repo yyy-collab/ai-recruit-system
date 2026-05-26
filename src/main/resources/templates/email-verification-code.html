@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>密码重置验证码</title>
+</head>
+<body>
+<div style="font-family: 'Microsoft YaHei', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+    <h2 style="color: #333;">密码重置请求</h2>
+    <p style="color: #666; line-height: 1.6;">
+        您好，您正在进行密码重置操作。您本次的验证码是：
+    </p>
+    <div style="text-align: center; margin: 30px 0;">
+            <span style="display: inline-block; padding: 10px 20px; font-size: 28px; font-weight: bold; color: #007bff; background-color: #f8f9fa; border-radius: 5px; letter-spacing: 5px;" th:text="${code}">
+                000000
+            </span>
+    </div>
+    <p style="color: #666; line-height: 1.6;">
+        验证码有效期为 <strong>5分钟</strong>，请尽快使用。<br>
+        如果您没有进行此操作，请忽略本邮件。
+    </p>
+    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+    <p style="color: #999; font-size: 12px;">
+        此邮件由AI招聘猎头系统自动发送，请勿直接回复。
+    </p>
+</div>
+</body>
+</html>

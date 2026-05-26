@@ -29,11 +29,14 @@ public interface SeekerService {
     int updateSeekerInfo(Integer seekerId, SeekerUpdateRequest request);
 
     //更新密码
-    int updatePassword(Integer seekerId, String oldPwd, String newPwd, String rePwd);
+    int updatePassword(Integer seekerId, String oldPwd, String newPwd, String rePwd,String token);
 
     //用户登出(将token加入黑名单)
     int logout(String token);
 
     //注销账号
     int deleteAccount(Integer seekerId, String password, String token);
+
+    //重置密码
+    int resetPassword(String username, String email, String code, String newPwd, String rePwd);
 }
