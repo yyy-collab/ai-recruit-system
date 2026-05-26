@@ -3,13 +3,10 @@ package com.recruit.airecruitsystem.utils;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * @param <K> 键的类型
- * @param <V> 值的类型
- */
+
 public class SimpleCache<K, V> {
-    private Map<K, V> cache = new ConcurrentHashMap<>();
-    private Map<K, Long> expireTime = new ConcurrentHashMap<>();
+    private Map<K, V> cache = new ConcurrentHashMap<>();// 存数据
+    private Map<K, Long> expireTime = new ConcurrentHashMap<>();// 存过期时间
     private long ttlMillis;  // 过期时间（毫秒）
 
     /**

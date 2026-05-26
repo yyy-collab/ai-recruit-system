@@ -48,17 +48,19 @@ public class MatchCalculateService {
         return vector;
     }
 
-    // 余弦相似度
+    // 余弦相似度（岗位和简历）
     private double cosineSimilarity(Map<String, Double> vecA, Map<String, Double> vecB) {
         Set<String> allKeys = new HashSet<>();
         allKeys.addAll(vecA.keySet());
         allKeys.addAll(vecB.keySet());
 
-        double dot = 0.0, normA = 0.0, normB = 0.0;
+        double dot = 0.0;// 点积（两个向量“方向一致”的程度）
+        double normA = 0.0;// 岗位向量的长度
+        double normB = 0.0;// 简历向量的长度
         for (String key : allKeys) {
             double a = vecA.getOrDefault(key, 0.0);
             double b = vecB.getOrDefault(key, 0.0);
-            dot += a * b;
+            dot += a * b;// 点积：越相似越大
             normA += a * a;
             normB += b * b;
         }
