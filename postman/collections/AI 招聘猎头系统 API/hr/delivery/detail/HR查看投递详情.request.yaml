@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/delivery/detail?delivery_id=5728"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  delivery_id: "5728"
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR查看投递详情.resources/examples
+order: 1000

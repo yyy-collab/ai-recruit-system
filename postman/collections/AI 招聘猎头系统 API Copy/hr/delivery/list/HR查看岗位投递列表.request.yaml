@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/delivery/list?job_id=4218&pageNum=1&pageSize=10&status=3&sort=time_desc"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  job_id: "4218"
+  pageNum: "1"
+  pageSize: "10"
+  status: "3"
+  sort: time_desc
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR查看岗位投递列表.resources/examples
+order: 1000

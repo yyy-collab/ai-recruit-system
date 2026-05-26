@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/refreshToken"
+method: POST
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/刷新HR JWT令牌.resources/examples
+order: 1000

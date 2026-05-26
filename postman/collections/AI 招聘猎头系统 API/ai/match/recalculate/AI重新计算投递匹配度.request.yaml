@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/ai/match/recalculate"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "delivery_id": 814
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/AI重新计算投递匹配度.resources/examples
+order: 1000

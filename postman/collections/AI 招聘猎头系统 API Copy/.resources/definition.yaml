@@ -1,0 +1,10 @@
+$kind: collection
+description: 基于 HanLP + TF-IDF + 余弦相似度的智能招聘系统
+variables:
+  baseUrl: http://localhost:8080
+auth:
+  - id: 80dcb5c3-8c0e-49e8-a8c3-3733dd3ecce3
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{bearerToken}}"

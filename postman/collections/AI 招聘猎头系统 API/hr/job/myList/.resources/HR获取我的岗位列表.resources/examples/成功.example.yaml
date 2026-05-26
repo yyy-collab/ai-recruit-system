@@ -1,0 +1,29 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/hr/job/myList?pageNum=1&pageSize=10&status=1&job_name=string"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Authorization
+      value: Bearer <token>
+      description: "Added as a part of security scheme: bearer"
+  queryParams:
+    pageNum: "1"
+    pageSize: "10"
+    status: "1"
+    job_name: string
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "code": 7933,
+        "msg": "string",
+        "data": {}
+      }
+order: 1000

@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/logout"
+method: POST
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR登出.resources/examples
+order: 1000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/delivery/updateStatus"
+method: PATCH
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "delivery_id": 865,
+      "status": 1,
+      "comment": "string"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR修改投递状态.resources/examples
+order: 1000

@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/resume/ai/detail?resume_id=4218"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  resume_id: "4218"
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/获取简历AI解析详情.resources/examples
+order: 1000

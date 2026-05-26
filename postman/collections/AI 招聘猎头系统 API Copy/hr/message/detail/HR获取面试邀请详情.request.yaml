@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/message/detail?message_id=4218"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  message_id: "4218"
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR获取面试邀请详情.resources/examples
+order: 1000

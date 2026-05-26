@@ -1,0 +1,30 @@
+$kind: http-request
+url: "{{baseUrl}}/seeker/update"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "real_name": "string",
+      "avatar_url": "string",
+      "phone": "13559539590",
+      "email": "c6PjrfV-wFnRV7A@wVoLvQkCoNhSW.jmch",
+      "age": 50,
+      "address": "string",
+      "edu_back": "专科",
+      "alma_mater": "string",
+      "state": "应届毕业生",
+      "ex_postion": "string",
+      "ex_city": "string",
+      "ex_salary_min": 4638,
+      "ex_salary_max": 4880
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/更新求职者信息.resources/examples
+order: 1000

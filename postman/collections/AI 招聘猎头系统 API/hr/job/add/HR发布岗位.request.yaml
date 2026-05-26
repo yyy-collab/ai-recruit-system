@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/job/add"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "job_name": "string",
+      "job_desc": "string",
+      "requirement": "string",
+      "keywords": "string",
+      "salary": "15-25K",
+      "work_address": "string",
+      "work_experience": "3-5年"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR发布岗位.resources/examples
+order: 1000

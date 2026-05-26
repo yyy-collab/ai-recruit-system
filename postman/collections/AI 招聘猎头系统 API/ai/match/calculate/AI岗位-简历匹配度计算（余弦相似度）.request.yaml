@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/ai/match/calculate"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "job_id": 1918,
+      "resume_id": 2269
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/AI岗位-简历匹配度计算（余弦相似度）.resources/examples
+order: 1000

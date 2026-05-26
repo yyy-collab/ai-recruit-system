@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/job/changeStatus"
+method: PATCH
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id": 3957,
+      "status": 1
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR岗位上下线.resources/examples
+order: 1000

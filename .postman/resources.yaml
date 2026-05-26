@@ -1,0 +1,14 @@
+# Use this workspace to collaborate
+workspace:
+  id: 4a8cd453-a288-4641-83a1-3c4755ed41c1
+
+localResources:
+  specs:
+    - ..\docs\ai-recruit-api.json
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ..\postman\collections\AI 招聘猎头系统 API: 40986dbf-d942-43ff-981a-5a4754c12259
+    ..\postman\collections\AI 招聘猎头系统 API Copy: 96c1df44-f39b-4421-9a4d-e988743eb5e2

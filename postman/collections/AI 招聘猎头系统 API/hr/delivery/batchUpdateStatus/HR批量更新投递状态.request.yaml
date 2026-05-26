@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/delivery/batchUpdateStatus"
+method: PATCH
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "delivery_ids": [
+        1879,
+        814
+      ],
+      "status": 2,
+      "reject_reason": "string"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR批量更新投递状态.resources/examples
+order: 1000

@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/seeker/logout"
+method: POST
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/求职者登出.resources/examples
+order: 1000

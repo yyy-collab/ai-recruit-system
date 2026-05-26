@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/update"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "real_name": "string",
+      "avatar_url": "string",
+      "company_name": "string",
+      "email": "GNIGT@dGzZdAddkCMIgaNaGLdiIyleouRzyq.rzp",
+      "phone": "16785716769"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/更新HR信息.resources/examples
+order: 1000

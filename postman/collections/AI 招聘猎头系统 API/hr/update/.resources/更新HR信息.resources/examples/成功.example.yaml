@@ -1,0 +1,36 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/hr/update"
+  method: PUT
+  headers:
+    - key: Content-Type
+      value: application/json
+    - key: Accept
+      value: application/json
+    - key: Authorization
+      value: Bearer <token>
+      description: "Added as a part of security scheme: bearer"
+  body:
+    type: json
+    content: |-
+      {
+        "real_name": "string",
+        "avatar_url": "string",
+        "company_name": "string",
+        "email": "FPOcR@aZajnUBdTbYfDEyhgiYlSjnetQRpyg.isc",
+        "phone": "18504962029"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "code": 7933,
+        "msg": "string",
+        "data": {}
+      }
+order: 1000
