@@ -1,0 +1,57 @@
+server:
+  port: 8080   # 后端服务监听端口
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/ai_recruit?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=utf8&allowPublicKeyRetrieval=true
+    username: root      # 数据库用户名，需修改为实际值
+    password: 123456    # 数据库密码，需修改为实际值
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  servlet:
+    multipart:
+      max-file-size: 20MB      # 上传文件最大大小
+      max-request-size: 20MB   # 请求总体积限制
+  mail: # 注意：以下邮箱的配置信息使用的是QQ邮箱，如果你不是使用的QQ邮箱请自行查询相关配置信息
+    host: smtp.qq.com          # QQ邮箱 SMTP 服务器地址
+    port: 465                  # SSL 端口
+    username: 1763620981@qq.com   # 你的发件人邮箱
+    password: xdmpknpfonbwbeag    # QQ邮箱授权码（不是登录密码！）
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
+
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml   # MyBatis的XML映射文件存放位置
+  type-aliases-package: com.recruit.airecruitsystem.pojo  # 实体类包，用于简化XML中的类型引用
+  configuration:
+    map-underscore-to-camel-case: true   # 数据库下划线字段自动映射为实体类驼峰属性（如 real_name -> realName）
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 打印SQL日志到控制台，便于调试
+
+jwt:
+  secret: 01234567890123456789012345678901   # JWT签名密钥，至少32位，生产环境应使用Base64编码
+  expiration: 7200                           # token有效期，单位秒（2小时）
+
+file:
+  upload:
+    path: E:\ai-recruit-system\upload   # 本地存储路径（建议使用绝对路径，示例：/data/upload/ 或 Windows 下的 D:/upload/）
+    access-path: /upload/  # 访问路径前缀（通过虚拟映射访问） ;文件上传的本地存储目录，Windows示例：D:/upload/
+
+logging:
+  level:
+    com.recruit: DEBUG       # 设置我们自己包的日志级别为DEBUG，便于观察运行细节
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+  params: count=countSql
