@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/seeker/register"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "nbcUfXYbC",
+      "password": "hkmPm06eIC5pZq"
+    }
+examples: ./.resources/求职者注册.resources/examples
+order: 1000

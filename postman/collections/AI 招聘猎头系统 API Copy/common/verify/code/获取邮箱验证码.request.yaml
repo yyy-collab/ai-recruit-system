@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/common/verify/code"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "aEcMbT0dIY8M5f@rJXNiDPZO.tv",
+      "type": "hr_reset"
+    }
+examples: ./.resources/获取邮箱验证码.resources/examples
+order: 1000

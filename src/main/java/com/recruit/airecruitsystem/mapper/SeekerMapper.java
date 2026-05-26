@@ -20,9 +20,13 @@ public interface SeekerMapper {
     @Select("SELECT * FROM seeker WHERE id = #{id}")
     Seeker findById(Integer id);
 
+    //查找邮箱
     @Select("SELECT * FROM seeker WHERE email = #{email}")
     Seeker findByEmail(String email);
 
+    /**
+    * 更新密码
+    */
     @Update("UPDATE seeker SET password = #{password}, update_time = NOW() WHERE id = #{id}")
     int updatePassword(@Param("id") Integer id, @Param("password") String password);
 
@@ -44,5 +48,20 @@ public interface SeekerMapper {
     @Update("UPDATE seeker SET refresh_count = 0, last_refresh_time = NULL WHERE id = #{id}")
     int resetRefreshCount(Integer id);
 
+    /**
+    * 更新求职者信息
+    */
     int updateSeeker(Seeker seeker);
+
+    /**
+     * 根据用户名和邮箱查询求职者（用于重置密码时验证身份）
+     */
+    @Select("SELECT * FROM seeker WHERE username = #{username} AND email = #{email}")
+    Seeker selectByUsernameAndEmail(@Param("username") String username, @Param("email") String email);
+
+    /**
+     * 更新求职者密码（加密后）
+     */
+    @Update("UPDATE seeker SET password = #{password}, update_time = NOW() WHERE id = #{id}")
+    int updatePasswordById(@Param("id") Integer id, @Param("password") String encodedPwd);
 }

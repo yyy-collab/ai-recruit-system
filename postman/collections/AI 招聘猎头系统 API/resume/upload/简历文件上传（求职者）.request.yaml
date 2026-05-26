@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/resume/upload"
+method: POST
+headers:
+  Content-Type: multipart/form-data
+  Accept: application/json
+body:
+  type: formdata
+  content:
+    - type: file
+      key: file
+      src: []
+      description: doc/docx，≤20MB
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/简历文件上传（求职者）.resources/examples
+order: 1000

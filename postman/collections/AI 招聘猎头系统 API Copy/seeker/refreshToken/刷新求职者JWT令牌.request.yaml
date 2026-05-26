@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/seeker/refreshToken"
+method: POST
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/刷新求职者JWT令牌.resources/examples
+order: 1000

@@ -7,7 +7,7 @@ import com.recruit.airecruitsystem.pojo.Job;
 import com.recruit.airecruitsystem.utils.StopWordsLoader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.*;
 
 @Component

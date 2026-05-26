@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/resume/delete?resume_id=5728"
+method: DELETE
+headers:
+  Accept: application/json
+queryParams:
+  resume_id: "5728"
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/删除简历（求职者）.resources/examples
+order: 1000

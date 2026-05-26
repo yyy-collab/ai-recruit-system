@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/job/update"
+method: PUT
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id": 4123,
+      "job_name": "string",
+      "job_desc": "string",
+      "requirement": "string",
+      "keywords": "string",
+      "salary": "string",
+      "work_address": "string",
+      "work_experience": "string"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR编辑岗位.resources/examples
+order: 1000

@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/seeker/login"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "string",
+      "password": "string"
+    }
+examples: ./.resources/求职者登录.resources/examples
+order: 1000

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.recruit.airecruitsystem.mapper.HrMapper">
+    <update id="updateHr" parameterType="com.recruit.airecruitsystem.pojo.Hr">
+        UPDATE hr
+        <set>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="avatarUrl != null">avatar_url = #{avatarUrl},</if>
+            <if test="companyName != null">company_name = #{companyName},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="phone != null">phone = #{phone},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+</mapper>

@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/seeker/job/list?pageNum=1&pageSize=10&job_name=string&sort=salary_desc"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  pageNum: "1"
+  pageSize: "10"
+  job_name: string
+  sort: salary_desc
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/求职者岗位列表.resources/examples
+order: 1000

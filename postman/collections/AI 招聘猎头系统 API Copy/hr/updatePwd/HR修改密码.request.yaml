@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/updatePwd"
+method: PATCH
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "old_pwd": "string",
+      "new_pwd": "5umZfqPrcnO",
+      "re_pwd": "string"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/HR修改密码.resources/examples
+order: 1000

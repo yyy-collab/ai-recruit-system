@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/seeker/delete"
+method: DELETE
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "password": "string"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{bearerToken}}"
+examples: ./.resources/求职者账号注销.resources/examples
+order: 1000

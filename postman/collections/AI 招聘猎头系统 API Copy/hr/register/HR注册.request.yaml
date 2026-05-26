@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/hr/register"
+method: POST
+headers:
+  Content-Type: application/json
+  Accept: application/json
+body:
+  type: json
+  content: |-
+    {
+      "username": "SQv_exrm",
+      "password": "sM83IopH"
+    }
+examples: ./.resources/HR注册.resources/examples
+order: 1000

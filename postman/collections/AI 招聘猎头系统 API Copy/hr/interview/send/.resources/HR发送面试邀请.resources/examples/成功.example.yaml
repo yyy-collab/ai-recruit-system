@@ -1,0 +1,40 @@
+$kind: http-example
+request:
+  url: "{{baseUrl}}/hr/interview/send"
+  method: POST
+  headers:
+    - key: Content-Type
+      value: application/json
+    - key: Accept
+      value: application/json
+    - key: Authorization
+      value: Bearer <token>
+      description: "Added as a part of security scheme: bearer"
+  body:
+    type: json
+    content: |-
+      {
+        "delivery_id": 2192,
+        "interview_date": "1995-11-03",
+        "interview_time": "18:58",
+        "interview_type": "线上面试",
+        "interview_round": "终试",
+        "interview_address": "string",
+        "contact_name": "string",
+        "contact_phone": "17497765288",
+        "remark": "string"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "code": 8031,
+        "msg": "string",
+        "data": {}
+      }
+order: 1000
