@@ -36,7 +36,7 @@ public class KeywordExtractService {
             tfMap.put(word, count + 1);
         }
 
-        // 找出最大词频，用于归一化
+        // 找出最大词频
         int maxTf = 0;
         for (int count : tfMap.values()) {
             if (count > maxTf) maxTf = count;

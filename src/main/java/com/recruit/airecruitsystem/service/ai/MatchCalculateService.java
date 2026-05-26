@@ -88,7 +88,7 @@ public class MatchCalculateService {
             return cached;
         }
 
-        // 2. 计算匹配度
+        //计算匹配度
         Map<String, Double> jobVec = textToVector(jobText);
         Map<String, Double> resumeVec = textToVector(resumeText);
         double baseScore = cosineSimilarity(jobVec, resumeVec);
@@ -96,7 +96,7 @@ public class MatchCalculateService {
         double finalScore = baseScore + extra;
         if (finalScore > 100) finalScore = 100;
 
-        // 3. 存入缓存
+        // 存入缓存
         matchCache.put(cacheKey, finalScore);
 
         return finalScore;
