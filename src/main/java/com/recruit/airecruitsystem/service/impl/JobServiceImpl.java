@@ -50,9 +50,9 @@ public class JobServiceImpl implements JobService {
         if (hr == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "HR信息不存在");
         }
-        if (!StringUtils.hasText(hr.getCompanyName())) {
-            throw new BusinessException(ResultCode.INFO_INCOMPLETE, "请先完善个人信息后再进行此操作");
-        }
+//        if (!StringUtils.hasText(hr.getCompanyName())) {
+//            throw new BusinessException(ResultCode.INFO_INCOMPLETE, "请先完善个人信息后再进行此操作");
+//        }
 
         Job job = new Job();
         job.setHrId(hrId);
@@ -210,7 +210,7 @@ public class JobServiceImpl implements JobService {
         }
         return status;
     }
-
+    //必填文本校验
     private String requireText(String value, String message) {
         String normalized = normalizeOptionalText(value);
         if (!StringUtils.hasText(normalized)) {
@@ -218,14 +218,14 @@ public class JobServiceImpl implements JobService {
         }
         return normalized;
     }
-
+    //部分更新场景下的必填文本处理
     private String normalizePatchRequiredText(String value, String message) {
         if (value == null) {
             return null;
         }
         return requireText(value, message);
     }
-
+    //可选文本规范化
     private String normalizeOptionalText(String value) {
         if (value == null) {
             return null;
@@ -233,11 +233,11 @@ public class JobServiceImpl implements JobService {
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
     }
-
+    //部分更新场景下的可选文本处理
     private String normalizePatchOptionalText(String value) {
         return value == null ? null : normalizeOptionalText(value);
     }
-
+    //岗位关键词规范化处理
     private String normalizeKeywords(String keywords) {
         String rawKeywords = requireText(keywords, "核心关键词不能为空");
         List<String> keywordList = Arrays.stream(rawKeywords.replace('，', ',').split(","))
@@ -249,7 +249,7 @@ public class JobServiceImpl implements JobService {
         }
         return new LinkedHashSet<>(keywordList).stream().collect(Collectors.joining(","));
     }
-
+    //更新参数有效性校验
     private boolean hasAnyUpdatableField(Job job) {
         return job.getJobName() != null
                 || job.getJobDesc() != null
@@ -259,7 +259,7 @@ public class JobServiceImpl implements JobService {
                 || job.getWorkAddress() != null
                 || job.getWorkExperience() != null;
     }
-
+    //求职者岗位列表排序规则解析
     private String resolveSeekerJobOrderBy(String sort) {
         String normalized = normalizeOptionalText(sort);
         if (!StringUtils.hasText(normalized)) {
