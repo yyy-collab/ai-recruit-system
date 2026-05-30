@@ -36,7 +36,7 @@ public class KeywordExtractService {
             tfMap.put(word, count + 1);
         }
 
-        // 找出最大词频，用于归一化
+        // 找出最大词频
         int maxTf = 0;
         for (int count : tfMap.values()) {
             if (count > maxTf) maxTf = count;
@@ -48,7 +48,7 @@ public class KeywordExtractService {
             String word = entry.getKey();
             int tf = entry.getValue();
             double normalizedTf = (double) tf / maxTf;   //把出现次数缩放到 0~1 之间
-            double idf = corpusManager.getIdf(word);
+            double idf = corpusManager.getIdf(word);//衡量一个词的稀有程度
             double score = normalizedTf * idf; //最终分数 = 出现频率 × 稀有程度
             scoreMap.put(word, score);
         }

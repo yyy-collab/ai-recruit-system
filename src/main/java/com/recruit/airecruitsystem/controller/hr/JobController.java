@@ -54,7 +54,7 @@ public class JobController {
         return Result.success(jobService.getMyJobs(pageNum, pageSize, status, jobName));
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping("/delete")
     public Result<Void> delete(@RequestParam("id") Integer id) {
         jobService.deleteJob(id);
         return Result.success("岗位删除成功", null);

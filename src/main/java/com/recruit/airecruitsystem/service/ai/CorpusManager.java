@@ -26,7 +26,7 @@ public class CorpusManager {
 
     @PostConstruct
     public void init() {
-        // 1. 从数据库加载所有上线岗位的描述文本
+        //从数据库加载所有上线岗位的描述文本
         List<Job> jobs = jobMapper.selectAllOnline();
         if (jobs != null && !jobs.isEmpty()) {
             for (Job job : jobs) {
@@ -41,7 +41,7 @@ public class CorpusManager {
             }
         }
 
-        // 2. 如果没有从数据库读到任何岗位，则用示例文档（防止空语料库）
+        //如果没有从数据库读到任何岗位，则用示例文档（防止空语料库）
         if (documents.isEmpty()) {
             System.out.println("警告：数据库无岗位数据，使用示例文档初始化语料库");
             addDocument("Java开发 3年经验 SpringBoot MySQL Redis 后端");
