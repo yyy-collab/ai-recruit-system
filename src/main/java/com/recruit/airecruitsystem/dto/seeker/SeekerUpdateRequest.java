@@ -1,47 +1,58 @@
 package com.recruit.airecruitsystem.dto.seeker;
 
-import com.fasterxml.jackson.databind.PropertyNamingStrategies;
-import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 import org.hibernate.validator.constraints.URL;
 
 @Data
-@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class SeekerUpdateRequest {
 
+    @JsonProperty("real_name")
     @Size(min = 2, max = 20, message = "真实姓名长度必须为2~20字符")
-    private String realName;      // 自动映射 JSON 中的 real_name
+    private String realName;
 
-    @URL(message = "头像URL格式不正确")
-    private String avatarUrl;     // 映射 avatar_url
+    @JsonProperty("avatar_url")
+    @Pattern(regexp = "^(/upload/.*|http://.*|https://.*)$", message = "头像URL格式不正确")
+    private String avatarUrl;
 
+    @JsonProperty("phone")
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
+    @JsonProperty("email")
     @Email(message = "邮箱格式不正确")
     private String email;
 
+    @JsonProperty("age")
     @Min(16) @Max(65)
     private Integer age;
 
+    @JsonProperty("address")
     private String address;
 
-    @Pattern(regexp = "^(专科|本科|硕士|博士)$", message = "学历只能是：专科、本科、硕士、博士")
-    private String eduBack;       // 映射 edu_back
+    @JsonProperty("edu_back")
+    @Pattern(regexp = "^(专科|本科|硕士|博士)?$", message = "学历只能是：专科、本科、硕士、博士")
+    private String eduBack;
 
-    private String almaMater;     // 映射 alma_mater
+    @JsonProperty("alma_mater")
+    private String almaMater;
 
-    @Pattern(regexp = "^(在职|离职|应届毕业生)$", message = "求职状态只能是：在职、离职、应届毕业生")
+    @JsonProperty("state")
+    @Pattern(regexp = "^(在职|离职|应届毕业生)?$", message = "求职状态只能是：在职、离职、应届毕业生")
     private String state;
 
-    private String exPosition;    // 映射 ex_position
+    @JsonProperty("ex_position")
+    private String exPosition;
 
-    private String exCity;        // 映射 ex_city
+    @JsonProperty("ex_city")
+    private String exCity;
 
+    @JsonProperty("ex_salary_min")
     @Min(0)
-    private Integer exSalaryMin;   // 映射 ex_salary_min
+    private Integer exSalaryMin;
 
+    @JsonProperty("ex_salary_max")
     @Min(0)
-    private Integer exSalaryMax;   // 映射 ex_salary_max
+    private Integer exSalaryMax;
 }

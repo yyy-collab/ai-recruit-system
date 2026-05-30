@@ -9,6 +9,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
@@ -21,6 +22,14 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+
+        String uri = request.getRequestURI();
+        if (uri.equals("/seeker/register") || uri.equals("/seeker/login") ||
+                uri.equals("/hr/register") || uri.equals("/hr/login") ||
+                uri.startsWith("/common/")) {
+            return true;
+        }
+
         // 预检请求（OPTIONS）直接放行，用于跨域
         if ("OPTIONS".equals(request.getMethod())) {
             return true;
@@ -58,6 +67,15 @@ public class AuthInterceptor implements HandlerInterceptor {
         try {
             Integer userId = jwtUtil.getUserId(token);
             String role = jwtUtil.getRole(token);
+            String requestUri = request.getRequestURI();
+            if (requestUri.startsWith("/hr") && !isRole(role, "hr")) {
+                writeJsonError(response, 403, "无权访问");
+                return false;
+            }
+            if (requestUri.startsWith("/seeker") && !isRole(role, "seeker")) {
+                writeJsonError(response, 403, "无权访问");
+                return false;
+            }
             UserContext.setUserId(userId);
             UserContext.setRole(role);
             return true;
@@ -72,5 +90,16 @@ public class AuthInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         // 请求结束后清理 ThreadLocal，防止内存泄漏
         UserContext.clear();
+    }
+
+    private boolean isRole(String actualRole, String expectedRole) {
+        return actualRole != null && expectedRole.equalsIgnoreCase(actualRole.trim());
+    }
+
+    private void writeJsonError(HttpServletResponse response, int status, String message) throws Exception {
+        response.setStatus(status);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(String.format("{\"code\":%d,\"msg\":\"%s\",\"data\":null}", status, message));
     }
 }

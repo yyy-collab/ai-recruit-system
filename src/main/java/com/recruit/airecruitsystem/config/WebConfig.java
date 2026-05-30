@@ -18,6 +18,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                         "/seeker/register", "/seeker/login", "/seeker/resetPwd",
                         "/hr/register", "/hr/login", "/hr/resetPwd",
+                        "/seeker/refreshToken", "/hr/refreshToken",
                         "/common/**"
                 );
     }

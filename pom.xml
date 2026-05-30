@@ -120,6 +120,12 @@
             <artifactId>swagger-annotations</artifactId>
             <version>2.2.21</version>
         </dependency>
+        <!-- HanLP 中文分词依赖 -->
+        <dependency>
+            <groupId>com.hankcs</groupId>
+            <artifactId>hanlp</artifactId>
+            <version>portable-1.8.4</version>
+        </dependency>
         <!-- Spring Cache-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -155,16 +161,21 @@
             <version>2.19.2</version>
         </dependency>
 
-        <!-- 邮件发送支持 -->
+        <!-- SpringBoot 邮件依赖（解决mail、JavaMailSender、MimeMessage报错） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
-        <!-- Thymeleaf 模板引擎，用于发送 HTML 邮件 -->
+        <!-- Thymeleaf 模板引擎依赖（解决thymeleaf、TemplateEngine、Context报错） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+            <version>2.1.1</version>
         </dependency>
     </dependencies>
 
