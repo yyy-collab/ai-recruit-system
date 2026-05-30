@@ -22,6 +22,14 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+
+        String uri = request.getRequestURI();
+        if (uri.equals("/seeker/register") || uri.equals("/seeker/login") ||
+                uri.equals("/hr/register") || uri.equals("/hr/login") ||
+                uri.startsWith("/common/")) {
+            return true;
+        }
+
         // 预检请求（OPTIONS）直接放行，用于跨域
         if ("OPTIONS".equals(request.getMethod())) {
             return true;

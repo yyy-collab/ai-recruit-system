@@ -1,6 +1,7 @@
 package com.recruit.airecruitsystem.utils;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
@@ -64,9 +65,11 @@ public class JwtUtil {
      * 解析 JWT Token，获取 Claims 对象
      * @param token JWT 字符串
      * @return Claims 载荷
+     * @throws ExpiredJwtException 如果 token 已过期
+     * @throws io.jsonwebtoken.MalformedJwtException 如果 token 格式错误
+     * @throws io.jsonwebtoken.security.SignatureException 如果签名验证失败
      */
     public Claims parseToken(String token) {
-
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
@@ -94,12 +97,19 @@ public class JwtUtil {
 
     /**
      * 判断 Token 是否已过期
+     * 捕获 ExpiredJwtException 并返回 true，避免拦截器处理时抛出异常
      * @param token JWT 字符串
      * @return true-已过期，false-未过期
      */
     public boolean isTokenExpired(String token) {
-        Date expirationDate = parseToken(token).getExpiration();
-        return expirationDate.before(new Date());
+        try {
+            Date expiration = parseToken(token).getExpiration();
+            return expiration.before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true;
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     /**
@@ -149,5 +159,4 @@ public class JwtUtil {
         String token = authorization.substring(7);
         return getUserId(token);
     }
-
 }

@@ -43,7 +43,8 @@ jwt:
 
 file:
   upload:
-    path: E:\ai-recruit-system\upload   # 本地存储路径（建议使用绝对路径，示例：/data/upload/ 或 Windows 下的 D:/upload/）
+    path: E:/ai-recruit-system/upload/
+    # 本地存储路径（建议使用绝对路径，示例：/data/upload/ 或 Windows 下的 D:/upload/）
     access-path: /upload/  # 访问路径前缀（通过虚拟映射访问） ;文件上传的本地存储目录，Windows示例：D:/upload/
 
 logging:
