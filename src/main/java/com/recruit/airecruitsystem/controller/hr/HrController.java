@@ -8,19 +8,15 @@ import com.recruit.airecruitsystem.result.Result;
 import com.recruit.airecruitsystem.service.common.InterviewMessageService;
 import com.recruit.airecruitsystem.service.hr.HrService;
 import com.recruit.airecruitsystem.utils.JwtUtil;
-import com.recruit.airecruitsystem.vo.common.PageResult;
+import com.recruit.airecruitsystem.utils.UserContext;
 import com.recruit.airecruitsystem.vo.common.TokenRefreshVO;
 import com.recruit.airecruitsystem.vo.hr.HrInfoVO;
 import com.recruit.airecruitsystem.vo.hr.HrLoginVO;
 import com.recruit.airecruitsystem.vo.hr.HrMessageDetailVO;
 import com.recruit.airecruitsystem.vo.hr.HrMessageListItemVO;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @RestController
 @RequestMapping("/hr")
@@ -82,11 +78,9 @@ public class HrController {
 
     // 获取当前HR信息
     @GetMapping("/userInfo")
-    public Result<HrInfoVO> getUserInfo(HttpServletRequest request) {
-        Integer hrId;
-        try {
-            hrId = jwtUtil.getUserIdFromRequest(request);
-        } catch (Exception e) {
+    public Result<HrInfoVO> getUserInfo() {
+        Integer hrId = UserContext.getUserId();
+        if (hrId == null) {
             return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
         }
         HrInfoVO vo = hrService.getCurrentHrInfo(hrId);
@@ -98,11 +92,9 @@ public class HrController {
 
     // 更新HR信息
     @PutMapping("/update")
-    public Result<String> updateHrInfo(@Valid @RequestBody HrUpdateRequest request, HttpServletRequest httpRequest) {
-        Integer hrId;
-        try {
-            hrId = jwtUtil.getUserIdFromRequest(httpRequest);
-        } catch (Exception e) {
+    public Result<String> updateHrInfo(@Valid @RequestBody HrUpdateRequest request) {
+        Integer hrId = UserContext.getUserId();
+        if (hrId == null) {
             return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
         }
         int code = hrService.updateHrInfo(hrId, request);
@@ -118,17 +110,13 @@ public class HrController {
     // 修改密码
     @PatchMapping("/updatePwd")
     public Result<String> updatePassword(@Valid @RequestBody HrUpdatePwdRequest request,
-                                       HttpServletRequest httpRequest,
-                                       @RequestHeader("Authorization") String authorization) {
+                                         @RequestHeader("Authorization") String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return Result.error(ResultCode.PARAM_ERROR, "未提供有效的认证令牌");
         }
         String token = authorization.substring(7);
-
-        Integer hrId;
-        try {
-            hrId = jwtUtil.getUserIdFromRequest(httpRequest);
-        } catch (Exception e) {
+        Integer hrId = UserContext.getUserId();
+        if (hrId == null) {
             return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
         }
 
@@ -189,24 +177,16 @@ public class HrController {
         }
     }
 
-    /**
-     * HR 注销账号
-     * @param request 请求体（含密码）
-     * @param authorization 请求头中的 Authorization
-     * @return Result
-     */
+    // HR 注销账号
     @DeleteMapping("/delete")
     public Result<String> deleteAccount(@Valid @RequestBody HrDeleteRequest request,
-                                      @RequestHeader(value = "Authorization", required = false) String authorization) {
+                                        @RequestHeader(value = "Authorization", required = false) String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return Result.error(ResultCode.PARAM_ERROR, "未提供有效的认证令牌");
         }
         String token = authorization.substring(7);
-        Integer hrId;
-        try {
-            // 简化：直接用 jwtUtil.getUserId(token)
-            hrId = jwtUtil.getUserId(token);
-        } catch (Exception e) {
+        Integer hrId = UserContext.getUserId();
+        if (hrId == null) {
             return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
         }
 
@@ -225,30 +205,37 @@ public class HrController {
         }
     }
 
-
-    //发送面试邀请
+    // 发送面试邀请
     @PostMapping("/interview/send")
-    public Result<Void> sendInterview(@Valid @RequestBody SendInterviewRequest request, HttpServletRequest httpRequest) {
-        Integer hrId = jwtUtil.getUserIdFromRequest(httpRequest);
+    public Result<Void> sendInterview(@Valid @RequestBody SendInterviewRequest request) {
+        Integer hrId = UserContext.getUserId();
+        if (hrId == null) {
+            return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
+        }
         int code = interviewMessageService.sendInterview(hrId, request);
         return code == ResultCode.SUCCESS ? Result.success("面试邀请发送成功", null) : Result.error(ResultCode.PARAM_ERROR, "发送失败");
     }
 
-    //hr消息列表
+    // HR消息列表
     @GetMapping("/message/list")
     public Result<PageInfo<HrMessageListItemVO>> getHrMessageList(
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize,
-            HttpServletRequest httpRequest) {
-        Integer hrId = jwtUtil.getUserIdFromRequest(httpRequest);
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        Integer hrId = UserContext.getUserId();
+        if (hrId == null) {
+            return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
+        }
         PageInfo<HrMessageListItemVO> pageInfo = interviewMessageService.getHrMessageList(hrId, status, pageNum, pageSize);
         return Result.success("操作成功", pageInfo);
     }
 
     @GetMapping("/message/detail")
-    public Result<HrMessageDetailVO> getHrMessageDetail(@RequestParam("message_id") Integer messageId, HttpServletRequest httpRequest) {
-        Integer hrId = jwtUtil.getUserIdFromRequest(httpRequest);
+    public Result<HrMessageDetailVO> getHrMessageDetail(@RequestParam("message_id") Integer messageId) {
+        Integer hrId = UserContext.getUserId();
+        if (hrId == null) {
+            return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
+        }
         HrMessageDetailVO vo = interviewMessageService.getHrMessageDetail(hrId, messageId);
         return vo == null ? Result.error(ResultCode.INTERVIEW_NOT_EXIST, "面试邀请不存在或无权限") : Result.success("操作成功", vo);
     }

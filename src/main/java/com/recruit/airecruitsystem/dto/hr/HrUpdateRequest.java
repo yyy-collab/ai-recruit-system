@@ -14,7 +14,7 @@ public class HrUpdateRequest {
     @JsonProperty("real_name")
     private String realName;
 
-    @URL(message = "头像URL格式不正确")
+    @Pattern(regexp = "^(/upload/.*|http://.*|https://.*)$", message = "头像URL格式不正确")
     @JsonProperty("avatar_url")
     private String avatarUrl;
 
