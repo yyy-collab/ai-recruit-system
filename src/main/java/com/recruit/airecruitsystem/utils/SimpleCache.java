@@ -34,4 +34,9 @@ public class SimpleCache<K, V> {
         }
         return cache.get(key);
     }
+
+    public void remove(K key) {
+        cache.remove(key);
+        expireTime.remove(key);
+    }
 }

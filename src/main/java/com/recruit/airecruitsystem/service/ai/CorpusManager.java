@@ -26,7 +26,7 @@ public class CorpusManager {
 
     @PostConstruct
     public void init() {
-        //从数据库加载所有上线岗位的描述文本
+        //从数据库加载所有岗位的描述文本
         List<Job> jobs = jobMapper.selectAllOnline();
         if (jobs != null && !jobs.isEmpty()) {
             for (Job job : jobs) {
