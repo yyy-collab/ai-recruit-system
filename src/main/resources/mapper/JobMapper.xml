@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.recruit.airecruitsystem.mapper.JobMapper">
+
+    <sql id="jobColumns">
+        id,
+        hr_id,
+        job_name,
+        job_desc,
+        requirement,
+        keywords,
+        salary,
+        work_address,
+        work_experience,
+        status,
+        delivery_count,
+        create_time,
+        update_time
+    </sql>
+
+    <insert id="insert" parameterType="com.recruit.airecruitsystem.pojo.Job" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO job (
+            hr_id,
+            job_name,
+            job_desc,
+            requirement,
+            keywords,
+            salary,
+            work_address,
+            work_experience,
+            status,
+            delivery_count
+        ) VALUES (
+            #{hrId},
+            #{jobName},
+            #{jobDesc},
+            #{requirement},
+            #{keywords},
+            #{salary},
+            #{workAddress},
+            #{workExperience},
+            #{status},
+            #{deliveryCount}
+        )
+    </insert>
+
+    <select id="selectById" resultType="com.recruit.airecruitsystem.pojo.Job">
+        SELECT <include refid="jobColumns"/>
+        FROM job
+        WHERE id = #{id}
+    </select>
+
+    <update id="updateSelective" parameterType="com.recruit.airecruitsystem.pojo.Job">
+        UPDATE job
+        <set>
+            <if test="jobName != null">job_name = #{jobName},</if>
+            <if test="jobDesc != null">job_desc = #{jobDesc},</if>
+            <if test="requirement != null">requirement = #{requirement},</if>
+            <if test="keywords != null">keywords = #{keywords},</if>
+            <if test="salary != null">salary = #{salary},</if>
+            <if test="workAddress != null">work_address = #{workAddress},</if>
+            <if test="workExperience != null">work_experience = #{workExperience},</if>
+            <if test="status != null">status = #{status},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM job
+        WHERE id = #{id}
+    </delete>
+
+    <select id="selectHrJobList" resultType="com.recruit.airecruitsystem.dto.job.HrJobListItemResponse">
+        SELECT id,
+               job_name,
+               job_desc,
+               requirement,
+               keywords,
+               salary,
+               work_address,
+               work_experience,
+               status,
+               create_time,
+               update_time,
+               delivery_count
+        FROM job
+        WHERE hr_id = #{hrId}
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="jobName != null and jobName != ''">
+            AND job_name LIKE CONCAT('%', #{jobName}, '%')
+        </if>
+        ORDER BY create_time DESC, id DESC
+    </select>
+
+    <select id="selectSeekerJobList" resultType="com.recruit.airecruitsystem.dto.job.SeekerJobListItemResponse">
+        SELECT j.id,
+               j.job_name,
+               j.salary,
+               j.work_address,
+               h.company_name,
+               j.create_time,
+               amr.match_score
+        FROM job j
+                 INNER JOIN hr h ON j.hr_id = h.id
+                 LEFT JOIN delivery d ON d.job_id = j.id AND d.seeker_id = #{seekerId}
+                 LEFT JOIN ai_match_result amr ON amr.delivery_id = d.id
+        WHERE j.status = 1
+        <if test="jobName != null and jobName != ''">
+            AND j.job_name LIKE CONCAT('%', #{jobName}, '%')
+        </if>
+    </select>
+
+    <select id="selectOnlineJobDetail" resultType="com.recruit.airecruitsystem.dto.job.SeekerJobDetailResponse">
+        SELECT j.id,
+               j.job_name,
+               j.job_desc,
+               j.requirement,
+               j.keywords,
+               j.salary,
+               h.company_name,
+               j.work_address,
+               j.work_experience,
+               h.real_name AS hr_name,
+               j.create_time
+        FROM job j
+                 INNER JOIN hr h ON j.hr_id = h.id
+        WHERE j.id = #{jobId}
+          AND j.status = 1
+    </select>
+</mapper>
