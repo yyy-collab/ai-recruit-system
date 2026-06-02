@@ -1,0 +1,33 @@
+### 1. 投递岗位
+POST http://localhost:8080/seeker/delivery/add
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2Vla2VyIiwidXNlcklkIjoxLCJpYXQiOjE3Nzk4MDAwMDgsImV4cCI6MTc3OTgwNzIwOH0.n_5lmKHPeferMkTFWGFVvdj1DDtUmONFDlj4HSpu-Bs
+
+{
+  "jobId": 1,
+  "seekerId": 1,
+  "resumeId": 1
+}
+
+### 2. 根据ID查询投递
+GET http://localhost:8080/seeker/delivery/getById?id=1
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2Vla2VyIiwidXNlcklkIjoxLCJpYXQiOjE3Nzk4MDAwMDgsImV4cCI6MTc3OTgwNzIwOH0.n_5lmKHPeferMkTFWGFVvdj1DDtUmONFDlj4HSpu-Bs
+
+### 3. 我的投递（你真实接口 ✅）
+GET http://localhost:8080/seeker/delivery/myList?pageNum=1&pageSize=5
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2Vla2VyIiwidXNlcklkIjoxLCJpYXQiOjE3Nzk4MDAwMDgsImV4cCI6MTc3OTgwNzIwOH0.n_5lmKHPeferMkTFWGFVvdj1DDtUmONFDlj4HSpu-Bs
+
+### 4. HR查看岗位投递
+GET http://localhost:8080/hr/delivery/list?jobId=1&pageNum=1&pageSize=5
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2Vla2VyIiwidXNlcklkIjoxLCJpYXQiOjE3Nzk4MDAwMDgsImV4cCI6MTc3OTgwNzIwOH0.n_5lmKHPeferMkTFWGFVvdj1DDtUmONFDlj4HSpu-Bs
+
+### 5. HR修改投递状态
+POST http://localhost:8080/hr/delivery/updateStatus
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2Vla2VyIiwidXNlcklkIjoxLCJpYXQiOjE3Nzk4MDAwMDgsImV4cCI6MTc3OTgwNzIwOH0.n_5lmKHPeferMkTFWGFVvdj1DDtUmONFDlj4HSpu-Bs
+
+{
+  "deliveryId": 1,
+  "status": 3,
+  "comment": "安排面试"
+}

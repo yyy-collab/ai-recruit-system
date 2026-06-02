@@ -4,6 +4,7 @@ import com.recruit.airecruitsystem.pojo.Delivery;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface DeliveryMapper {
@@ -56,4 +57,103 @@ public interface DeliveryMapper {
      */
     @Select("SELECT * FROM delivery WHERE job_id = #{jobId} ORDER BY delivery_time DESC")
     List<Delivery> selectByJobId(Integer jobId);
+
+    List<Delivery> selectBySeekerIdAndStatus(
+            @Param("seekerId") Integer seekerId,
+            @Param("status") Integer status
+    );
+
+    /**
+     * 5.2 求职者查看我的投递记录（关联查询：岗位、公司、简历、AI结果）
+     */
+    @Select("<script>"
+            + "SELECT "
+            + "d.id                  AS delivery_id, "
+            + "d.job_id              AS job_id, "
+            + "j.job_name            AS job_name, "
+            + "h.company_name        AS company_name, "
+            + "j.salary              AS salary, "
+            + "r.file_name           AS resume_file_name, "
+            + "am.match_score        AS match_score, "
+            + "am.match_level        AS match_level, "
+            + "d.status              AS status, "
+            + "d.delivery_time       AS delivery_time, "
+            + "d.update_time         AS update_time "
+            + "FROM delivery d "
+            + "LEFT JOIN job j ON d.job_id = j.id "
+            + "LEFT JOIN hr h ON j.hr_id = h.id "
+            + "LEFT JOIN resume r ON d.resume_id = r.id "
+            + "LEFT JOIN ai_match_result am ON d.id = am.delivery_id "
+            + "WHERE d.seeker_id = #{seekerId} "
+            + "<if test='status != null'>AND d.status = #{status}</if> "
+            + "ORDER BY d.delivery_time DESC"
+            + "</script>")
+    List<Map<String, Object>> selectMyDeliveryList(
+            @Param("seekerId") Integer seekerId,
+            @Param("status") Integer status
+    );
+    /**
+     * 5.3HR查询岗位投递列表（严格匹配目标返回字段）
+     */
+    @Select("<script>"
+            + "SELECT "
+            + "d.id AS delivery_id, "
+            + "d.seeker_id, "
+            + "s.real_name AS seeker_name, "
+            + "d.resume_id, "
+            + "r.file_name AS resume_file_name, "
+            + "am.match_score, "
+            + "am.match_level, "
+            + "d.status, "
+            + "d.delivery_time "
+            + "FROM delivery d "
+            + "LEFT JOIN seeker s ON d.seeker_id = s.id "
+            + "LEFT JOIN resume r ON d.resume_id = r.id "
+            + "LEFT JOIN ai_match_result am ON d.id = am.delivery_id "
+            + "WHERE d.job_id = #{jobId} "
+            + "<if test='status != null'>AND d.status = #{status}</if>"
+            + "</script>")
+    List<Map<String, Object>> selectHrDeliveryList(
+            @Param("jobId") Integer jobId,
+            @Param("status") Integer status
+    );
+    /**
+     * 5.4 HR查看投递详情（包含求职者、简历、AI匹配结果）
+     */
+    @Select("""
+SELECT 
+    d.id AS delivery_id,
+    d.job_id,
+    j.job_name,
+    d.status,
+    d.delivery_time,
+    d.update_time,
+    s.id AS seeker_id,
+    s.real_name,
+    s.phone,
+    s.email,
+    s.age,
+    s.edu_back,
+    s.alma_mater,
+    r.id AS resume_id,
+    r.file_url AS resume_file_url,
+    rp.keyword_coverage,
+    rp.work_experience,
+    rp.skills,
+    am.match_score,
+    am.match_level,
+    am.core_advantages,
+    am.potential_risks,
+    am.skill_tags,
+    am.analysis_time
+FROM delivery d
+LEFT JOIN job j ON d.job_id = j.id
+LEFT JOIN seeker s ON d.seeker_id = s.id
+LEFT JOIN resume r ON d.resume_id = r.id
+LEFT JOIN resume_parse_result rp ON r.id = rp.resume_id
+LEFT JOIN ai_match_result am ON d.id = am.delivery_id
+WHERE d.id = #{deliveryId}
+""")
+    Map<String, Object> selectDeliveryDetail(@Param("deliveryId") Integer deliveryId);
+    
 }
