@@ -53,4 +53,6 @@ public interface JobMapper {
 
     @Select("SELECT id, job_name, job_desc, requirement, keywords, salary, status, work_address, work_experience, create_time, update_time FROM job WHERE status = 1")
     List<Job> selectAllOnline();
+    @Select("SELECT * FROM job WHERE hr_id = #{hrId} ORDER BY id LIMIT 1")
+    Job selectFirstByHrId(Integer hrId);
 }
