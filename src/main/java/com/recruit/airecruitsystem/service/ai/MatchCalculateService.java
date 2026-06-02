@@ -111,4 +111,10 @@ public class MatchCalculateService {
         if (score >= 60) return "中等潜力";
         return "低潜力";
     }
+
+    //删除缓存
+    public void clearCache(String jobText, String resumeText) {
+        String cacheKey = jobText.hashCode() + "_" + resumeText.hashCode();
+        matchCache.remove(cacheKey);
+    }
 }

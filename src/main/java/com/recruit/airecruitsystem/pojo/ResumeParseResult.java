@@ -5,13 +5,13 @@ import java.util.Date;
 public class ResumeParseResult {
     private Integer id;
     private Integer resumeId;
-    private Integer keywordCoverage;   // 数据库字段 keyword_coverage
-    private String basicInfo;          // 数据库字段 basic_info (JSON)
-    private String workExperience;     // 数据库字段 work_experience
-    private String skills;             // 数据库字段 skills (JSON)
-    private String workHistory;        // 数据库字段 work_history (JSON)
-    private String aiSummary;          // 数据库字段 ai_summary
-    private String improvementSug;     // 数据库字段 improvement_sug
+    private Integer keywordCoverage;
+    private String basicInfo;
+    private String workExperience;
+    private String skills;
+    private String workHistory;
+    private String aiSummary;
+    private String improvementSug;
     private Date createTime;
     private Date updateTime;
 

@@ -1,15 +1,12 @@
 package com.recruit.airecruitsystem.controller.ai;
 
-import com.recruit.airecruitsystem.mapper.JobMapper;
-import com.recruit.airecruitsystem.mapper.ResumeMapper;
-import com.recruit.airecruitsystem.mapper.ResumeParseResultMapper;
-import com.recruit.airecruitsystem.pojo.Job;
-import com.recruit.airecruitsystem.pojo.Resume;
-import com.recruit.airecruitsystem.pojo.ResumeParseResult;
+import com.recruit.airecruitsystem.mapper.*;
+import com.recruit.airecruitsystem.pojo.*;
 import com.recruit.airecruitsystem.result.Result;
 import com.recruit.airecruitsystem.service.ai.HanLPService;
 import com.recruit.airecruitsystem.service.ai.KeywordExtractService;
 import com.recruit.airecruitsystem.service.ai.MatchCalculateService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
@@ -27,6 +24,10 @@ public class AiController {
     @Autowired
     private ResumeParseResultMapper resumeParseResultMapper;
 
+    @Autowired
+    private DeliveryMapper deliveryMapper;
+    @Autowired
+    private AiMatchResultMapper aiMatchResultMapper;
     // 已有的分词接口
     @PostMapping("/word/segment")
     public Result segment(@RequestBody Map<String, String> request) {
@@ -58,7 +59,8 @@ public class AiController {
             return Result.error(10006, "简历文本获取未实现，请先完善");
         } else if ("job".equals(type)) {
             if (jobId == null) {
-                return Result.error(10001, "job_id 不能为空");
+                return Result.error(10001, "job_id 不" +
+                        "能为空");
             }
             // 查询岗位
             Job job = jobMapper.selectById(jobId);
@@ -154,6 +156,91 @@ public class AiController {
         data.put("match_score", score);
         data.put("match_level", level);
         data.put("algorithm", "HanLP + TF-IDF + 余弦相似度");
+        return Result.success(data);
+    }
+
+    //重新计算接口
+    private String buildJobText(Job job) {
+        return (job.getJobName() != null ? job.getJobName() : "")
+                + " " + (job.getJobDesc() != null ? job.getJobDesc() : "")
+                + " " + (job.getRequirement() != null ? job.getRequirement() : "")
+                + " " + (job.getKeywords() != null ? job.getKeywords() : "");
+    }
+
+    private String buildResumeText(ResumeParseResult parseResult) {
+        StringBuilder sb = new StringBuilder();
+        if (parseResult.getSkills() != null) {
+            String skills = parseResult.getSkills().replaceAll("[\\[\\]\"]", "").replace(",", " ");
+            sb.append(skills).append(" ");
+        }
+        if (parseResult.getWorkExperience() != null) {
+            sb.append(parseResult.getWorkExperience()).append(" ");
+        }
+        if (parseResult.getWorkHistory() != null) {
+            String history = parseResult.getWorkHistory().replaceAll("[\\[\\]{}\"]", "").replace(",", " ");
+            sb.append(history);
+        }
+        return sb.toString().trim();
+    }
+    @PostMapping("/match/recalculate")
+    @Transactional
+    public Result recalculateMatch(@RequestBody Map<String, Integer> request) {
+        Integer deliveryId = request.get("delivery_id");
+        if (deliveryId == null) {
+            return Result.error(10001, "delivery_id 不能为空");
+        }
+
+        //查询投递记录（只需要 job_id 和 resume_id）
+        Delivery delivery = deliveryMapper.selectById(deliveryId);
+        if (delivery == null) {
+            return Result.error(10006, "投递记录不存在");
+        }
+
+        //查询岗位信息
+        Job job = jobMapper.selectById(delivery.getJobId());
+        if (job == null) {
+            return Result.error(10006, "岗位不存在");
+        }
+
+        //查询简历解析结果
+        ResumeParseResult parseResult = resumeParseResultMapper.selectByResumeId(delivery.getResumeId());
+        if (parseResult == null) {
+            return Result.error(10017, "简历解析结果不存在，请重新上传");
+        }
+
+        //拼接文本
+        String jobText = buildJobText(job);
+        String resumeText = buildResumeText(parseResult);
+        if (resumeText.isEmpty()) {
+            return Result.error(10017, "简历文本为空，请重新上传并等待解析");
+        }
+
+        // 清除缓存（避免使用旧的匹配分数）
+        matchCalculateService.clearCache(jobText, resumeText);
+
+        // 调用匹配服务重新计算
+        double newScore = matchCalculateService.calculateMatch(jobText, resumeText);
+        String newLevel = matchCalculateService.getMatchLevel(newScore);
+
+        // 更新或插入 ai_match_result 表
+        AiMatchResult existing = aiMatchResultMapper.selectByDeliveryId(deliveryId);
+        if (existing == null) {
+            existing = new AiMatchResult();
+            existing.setDeliveryId(deliveryId);
+            existing.setMatchScore(newScore);
+            existing.setMatchLevel(newLevel);
+            aiMatchResultMapper.insert(existing);
+        } else {
+            existing.setMatchScore(newScore);
+            existing.setMatchLevel(newLevel);
+            // 同样可以更新其他字段
+            aiMatchResultMapper.updateByDeliveryId(existing);
+        }
+
+        // 返回结果
+        Map<String, Object> data = new HashMap<>();
+        data.put("match_score", newScore);
+        data.put("match_level", newLevel);
         return Result.success(data);
     }
 }

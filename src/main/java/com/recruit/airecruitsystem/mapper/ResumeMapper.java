@@ -7,5 +7,5 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface ResumeMapper {
     @Select("SELECT * FROM resume WHERE id = #{resumeId}")
-    Resume selectById(Integer resumeId);
+    Resume selectById(Integer Id);
 }
