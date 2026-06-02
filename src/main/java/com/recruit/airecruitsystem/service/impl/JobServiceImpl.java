@@ -1,5 +1,5 @@
 package com.recruit.airecruitsystem.service.impl;
-
+import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.recruit.airecruitsystem.constant.ResultCode;
@@ -131,12 +131,12 @@ public class JobServiceImpl implements JobService {
         int validPageSize = normalizePageSize(pageSize);
         String validJobName = normalizeOptionalText(jobName);
 
-        PageHelper.startPage(validPageNum, validPageSize);
-        PageHelper.orderBy(resolveSeekerJobOrderBy(sort));
+        Page page = PageHelper.startPage(validPageNum, validPageSize);
+        page.setUnsafeOrderBy(resolveSeekerJobOrderBy(sort)); // ✅ 正确写法
+
         List<SeekerJobListItemResponse> jobs = jobMapper.selectSeekerJobList(seekerId, validJobName);
         return PageResponse.of(new PageInfo<>(jobs));
     }
-
     @Override
     public SeekerJobDetailResponse getOnlineJobDetail(Integer jobId) {
         requireCurrentUserId();
