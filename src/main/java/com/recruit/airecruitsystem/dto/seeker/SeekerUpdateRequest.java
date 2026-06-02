@@ -13,7 +13,7 @@ public class SeekerUpdateRequest {
     private String realName;
 
     @JsonProperty("avatar_url")
-    @Pattern(regexp = "^(/upload/.*|http://.*|https://.*)$", message = "头像URL格式不正确")
+    @URL(message = "头像URL格式不正确")
     private String avatarUrl;
 
     @JsonProperty("phone")
@@ -32,14 +32,14 @@ public class SeekerUpdateRequest {
     private String address;
 
     @JsonProperty("edu_back")
-    @Pattern(regexp = "^(专科|本科|硕士|博士)?$", message = "学历只能是：专科、本科、硕士、博士")
+    @Pattern(regexp = "^(专科|本科|硕士|博士)$", message = "学历只能是：专科、本科、硕士、博士")
     private String eduBack;
 
     @JsonProperty("alma_mater")
     private String almaMater;
 
     @JsonProperty("state")
-    @Pattern(regexp = "^(在职|离职|应届毕业生)?$", message = "求职状态只能是：在职、离职、应届毕业生")
+    @Pattern(regexp = "^(在职|离职|应届毕业生)$", message = "求职状态只能是：在职、离职、应届毕业生")
     private String state;
 
     @JsonProperty("ex_position")
