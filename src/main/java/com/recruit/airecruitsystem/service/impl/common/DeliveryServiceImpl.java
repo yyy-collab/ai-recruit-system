@@ -87,10 +87,10 @@ public class DeliveryServiceImpl implements DeliveryService {
                 return Result.error(10006, "简历不存在");
             }
             Integer isParsed = resume.getIsParsed();
-            if (isParsed == null || isParsed == 0) {
+            if (isParsed == null || isParsed == 0 || isParsed == 2) {
                 return Result.error(10016, "简历解析中，暂无法投递");
             }
-            if (isParsed == 2) {
+            if (isParsed == 3) {
                 return Result.error(10017, "简历解析失败，无法投递");
             }
             // =======================================================================
@@ -264,11 +264,12 @@ public class DeliveryServiceImpl implements DeliveryService {
             Map<String, Object> resumeInfo = new HashMap<>();
             resumeInfo.put("resume_id", rawData.get("resume_id"));
             resumeInfo.put("resume_file_url", rawData.get("resume_file_url"));
-            resumeInfo.put("keyword_coverage", rawData.get("keyword_coverage"));
 
             Map<String, Object> parsedData = new HashMap<>();
+            parsedData.put("basic_info", rawData.get("basic_info"));
             parsedData.put("work_experience", rawData.get("work_experience"));
             parsedData.put("skills", rawData.get("skills"));
+            parsedData.put("work_history", rawData.get("work_history"));
             resumeInfo.put("parsed_data", parsedData);
             data.put("resume_info", resumeInfo);
 

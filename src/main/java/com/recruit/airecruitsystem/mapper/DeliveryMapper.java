@@ -58,6 +58,8 @@ public interface DeliveryMapper {
     @Select("SELECT * FROM delivery WHERE job_id = #{jobId} ORDER BY delivery_time DESC")
     List<Delivery> selectByJobId(Integer jobId);
 
+
+    @Select("SELECT * FROM delivery WHERE seeker_id = #{seekerId} AND status = #{status}")
     List<Delivery> selectBySeekerIdAndStatus(
             @Param("seekerId") Integer seekerId,
             @Param("status") Integer status
@@ -137,9 +139,10 @@ SELECT
     s.alma_mater,
     r.id AS resume_id,
     r.file_url AS resume_file_url,
-    rp.keyword_coverage,
+    rp.basic_info,
     rp.work_experience,
     rp.skills,
+    rp.work_history,
     am.match_score,
     am.match_level,
     am.core_advantages,
