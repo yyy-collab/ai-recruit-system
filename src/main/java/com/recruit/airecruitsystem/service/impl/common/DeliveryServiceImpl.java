@@ -81,6 +81,10 @@ public class DeliveryServiceImpl implements DeliveryService {
             if (seeker == null || job == null) {
                 return Result.error(10006, "资源不存在");
             }
+            // ==========校验岗位状态 1上线可投、0下线不可投递==========
+            if(job.getStatus() == 0){
+                return Result.error(10018, "该岗位已下线，无法投递");
+            }
 
             // ====================== 简历解析状态校验 ======================
             Resume resume = resumeMapper.selectById(delivery.getResumeId());
