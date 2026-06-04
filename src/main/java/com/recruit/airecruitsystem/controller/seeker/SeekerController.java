@@ -1,7 +1,5 @@
 package com.recruit.airecruitsystem.controller.seeker;
 
-
-import com.github.pagehelper.PageInfo;
 import com.recruit.airecruitsystem.constant.ResultCode;
 import com.recruit.airecruitsystem.dto.seeker.*;
 import com.recruit.airecruitsystem.result.Result;
@@ -16,15 +14,8 @@ import com.recruit.airecruitsystem.vo.seeker.SeekerMessageDetailVO;
 import com.recruit.airecruitsystem.vo.seeker.SeekerMessageListItemVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @RestController
 @RequestMapping("/seeker")
@@ -39,12 +30,10 @@ public class SeekerController {
     @Autowired
     private InterviewMessageService interviewMessageService;
 
+    // 注册
     @PostMapping("/register")
-    public Result<String> register(@Validated @RequestBody SeekerRegisterRequest request) {
-        String username = request.getUsername();
-        String password = request.getPassword();
-
-        int code = seekerService.register(username, password);
+    public Result<String> register(@Valid @RequestBody SeekerRegisterRequest request) {
+        int code = seekerService.register(request.getUsername(), request.getPassword());
         if (code == ResultCode.SUCCESS) {
             return Result.success("注册成功，请登录后完善个人信息");
         } else if (code == ResultCode.USERNAME_EXIST) {
@@ -54,26 +43,25 @@ public class SeekerController {
         }
     }
 
+    // 登录
     @PostMapping("/login")
-    public Result<SeekerLoginVO> login(@Validated @RequestBody SeekerLoginRequest request) {
-        SeekerLoginVO vo=new SeekerLoginVO();
-
-        int code=seekerService.login(request.getUsername(), request.getPassword(),vo);
-        if(code==ResultCode.SUCCESS){
-            return Result.success("登录成功",vo);
-        }else{
-            return Result.error(ResultCode.LOGIN_ERROR,"用户名或密码错误");
+    public Result<SeekerLoginVO> login(@Valid @RequestBody SeekerLoginRequest request) {
+        SeekerLoginVO vo = new SeekerLoginVO();
+        int code = seekerService.login(request.getUsername(), request.getPassword(), vo);
+        if (code == ResultCode.SUCCESS) {
+            return Result.success("登录成功", vo);
+        } else {
+            return Result.error(ResultCode.LOGIN_ERROR, "用户名或密码错误");
         }
     }
 
+    // 刷新Token
     @PostMapping("/refreshToken")
     public Result<TokenRefreshVO> refreshToken(@RequestHeader("Authorization") String authorization) {
-
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return Result.error(ResultCode.PARAM_ERROR, "无效的Authorization头");
         }
         String oldToken = authorization.substring(7);
-
         TokenRefreshVO vo = new TokenRefreshVO();
         int code = seekerService.refreshToken(oldToken, vo);
         if (code == ResultCode.SUCCESS) {
@@ -87,6 +75,7 @@ public class SeekerController {
         }
     }
 
+    // 获取当前求职者信息
     @GetMapping("/userInfo")
     public Result<SeekerInfoVO> getUserInfo(HttpServletRequest request) {
         Integer seekerId;
@@ -102,16 +91,16 @@ public class SeekerController {
         return Result.success("操作成功", vo);
     }
 
+    // 更新求职者信息
     @PutMapping("/update")
     public Result<String> updateSeekerInfo(@Valid @RequestBody SeekerUpdateRequest request,
-                                         HttpServletRequest httpRequest) {
+                                           HttpServletRequest httpRequest) {
         Integer seekerId;
         try {
             seekerId = jwtUtil.getUserIdFromRequest(httpRequest);
         } catch (Exception e) {
             return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
         }
-
         int code = seekerService.updateSeekerInfo(seekerId, request);
         if (code == ResultCode.SUCCESS) {
             return Result.success("信息更新成功");
@@ -124,31 +113,26 @@ public class SeekerController {
         }
     }
 
+    // 修改密码
     @PatchMapping("/updatePwd")
     public Result<String> updatePassword(@Valid @RequestBody SeekerUpdatePwdRequest request,
-                                       HttpServletRequest httpRequest,
-                                       @RequestHeader("Authorization") String authorization) {
-        // 提取 Token
+                                         HttpServletRequest httpRequest,
+                                         @RequestHeader("Authorization") String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return Result.error(ResultCode.PARAM_ERROR, "未提供有效的认证令牌");
         }
         String token = authorization.substring(7);
-
-        // 获取当前用户 ID
         Integer seekerId;
         try {
             seekerId = jwtUtil.getUserIdFromRequest(httpRequest);
         } catch (Exception e) {
             return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
         }
-
-        // 调用 Service
         int code = seekerService.updatePassword(seekerId,
                 request.getOldPwd(),
                 request.getNewPwd(),
                 request.getRePwd(),
                 token);
-
         switch (code) {
             case ResultCode.SUCCESS:
                 return Result.success("密码修改成功，请重新登录");
@@ -163,6 +147,7 @@ public class SeekerController {
         }
     }
 
+    // 登出
     @PostMapping("/logout")
     public Result<String> logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
@@ -177,9 +162,10 @@ public class SeekerController {
         }
     }
 
+    // 注销账号
     @DeleteMapping("/delete")
     public Result<String> deleteAccount(@Valid @RequestBody SeekerDeleteRequest request,
-                                      @RequestHeader(value = "Authorization", required = false) String authorization) {
+                                        @RequestHeader(value = "Authorization", required = false) String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
             return Result.error(ResultCode.PARAM_ERROR, "未提供有效的认证令牌");
         }
@@ -190,7 +176,6 @@ public class SeekerController {
         } catch (Exception e) {
             return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
         }
-
         int code = seekerService.deleteAccount(seekerId, request.getPassword(), token);
         switch (code) {
             case ResultCode.SUCCESS:
@@ -204,6 +189,7 @@ public class SeekerController {
         }
     }
 
+    // 重置密码
     @PostMapping("/resetPwd")
     public Result<String> resetPassword(@Valid @RequestBody SeekerResetPwdRequest request) {
         int code = seekerService.resetPassword(
@@ -225,27 +211,34 @@ public class SeekerController {
         }
     }
 
+    // ==================== 面试邀请与消息 ====================
 
+    // 求职者获取消息列表（分页）
     @GetMapping("/message/list")
-    public Result<PageInfo<SeekerMessageListItemVO>> getSeekerMessageList(
+    public Result<PageResult<SeekerMessageListItemVO>> getSeekerMessageList(
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
             HttpServletRequest httpRequest) {
         Integer seekerId = jwtUtil.getUserIdFromRequest(httpRequest);
-        PageInfo<SeekerMessageListItemVO> pageInfo = interviewMessageService.getSeekerMessageList(seekerId, status, pageNum, pageSize);
-        return Result.success("操作成功", pageInfo);
+        PageResult<SeekerMessageListItemVO> result = interviewMessageService.getSeekerMessageList(seekerId, status, pageNum, pageSize);
+        return Result.success("操作成功", result);
     }
 
+    // 求职者获取消息详情
     @GetMapping("/message/detail")
-    public Result<SeekerMessageDetailVO> getSeekerMessageDetail(@RequestParam("message_id") Integer messageId, HttpServletRequest httpRequest) {
+    public Result<SeekerMessageDetailVO> getSeekerMessageDetail(@RequestParam("message_id") Integer messageId,
+                                                                HttpServletRequest httpRequest) {
         Integer seekerId = jwtUtil.getUserIdFromRequest(httpRequest);
         SeekerMessageDetailVO vo = interviewMessageService.getSeekerMessageDetail(seekerId, messageId);
-        return vo == null ? Result.error(ResultCode.INTERVIEW_NOT_EXIST, "面试邀请不存在或无权限") : Result.success("操作成功", vo);
+        return vo == null ? Result.error(ResultCode.INTERVIEW_NOT_EXIST, "面试邀请不存在或无权限")
+                : Result.success("操作成功", vo);
     }
 
+    // 求职者处理面试邀请（接受/拒绝）
     @PostMapping("/interview/handle")
-    public Result<Void> handleInterview(@Valid @RequestBody HandleInterviewRequest request, HttpServletRequest httpRequest) {
+    public Result<Void> handleInterview(@Valid @RequestBody HandleInterviewRequest request,
+                                        HttpServletRequest httpRequest) {
         Integer seekerId = jwtUtil.getUserIdFromRequest(httpRequest);
         int code = interviewMessageService.handleInterview(seekerId, request);
         switch (code) {
