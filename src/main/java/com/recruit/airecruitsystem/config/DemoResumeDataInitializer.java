@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.recruit.airecruitsystem.mapper.*;
 import com.recruit.airecruitsystem.model.ResumeAnalysisSnapshot;
 import com.recruit.airecruitsystem.pojo.*;
-import com.recruit.airecruitsystem.service.resume.ResumeAiClient;
 import com.recruit.airecruitsystem.utils.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 @Component
 public class DemoResumeDataInitializer implements ApplicationRunner {
@@ -43,9 +43,6 @@ public class DemoResumeDataInitializer implements ApplicationRunner {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private ResumeAiClient resumeAiClient;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -136,7 +133,7 @@ public class DemoResumeDataInitializer implements ApplicationRunner {
             String normalizedAccessPath = accessPath.endsWith("/") ? accessPath : accessPath + "/";
             resume = Resume.builder()
                     .seekerId(seeker.getId())
-                    .fileName("陈志远-高级前端工程师-AI产品架构.pdf")
+                    .fileName("陈志远-高级前端工程师-AI产品架构.docx")
                     .fileUrl(normalizedAccessPath + "resume/demo/chen-zhiyuan-demo-resume.txt")
                     .isParsed(1)
                     .build();
@@ -144,20 +141,39 @@ public class DemoResumeDataInitializer implements ApplicationRunner {
         }
 
         if (resumeParseResultMapper.selectByResumeId(resume.getId()) == null) {
-            ResumeAnalysisSnapshot snapshot = resumeAiClient.analyze(
-                    seeker,
-                    resume,
-                    "陈志远 高级前端工程师 AI 产品架构 飞书 AI 团队 LLM 应用 Vue3 TypeScript"
+            ResumeAnalysisSnapshot.BasicInfo basicInfo = ResumeAnalysisSnapshot.BasicInfo.builder()
+                    .realName("陈志远")
+                    .phone("13888888888")
+                    .email("chen.zy@example.com")
+                    .age(29)
+                    .eduBack("本科")
+                    .almaMater("浙江大学")
+                    .build();
+            List<String> skills = List.of("Vue 3", "TypeScript", "LLM 应用", "组件化", "性能优化");
+            List<ResumeAnalysisSnapshot.WorkHistoryItem> workHistory = List.of(
+                    ResumeAnalysisSnapshot.WorkHistoryItem.builder()
+                            .company("字节跳动")
+                            .position("高级前端工程师")
+                            .startTime("2022.06")
+                            .endTime("至今")
+                            .description("负责飞书 AI 团队前端架构和 LLM 应用接入。")
+                            .coreSkills(List.of("Vue 3", "TypeScript", "LLM 应用"))
+                            .build(),
+                    ResumeAnalysisSnapshot.WorkHistoryItem.builder()
+                            .company("阿里巴巴")
+                            .position("前端开发工程师")
+                            .startTime("2019.07")
+                            .endTime("2022.05")
+                            .description("负责钉钉协同场景前端模块开发与性能优化。")
+                            .coreSkills(List.of("TypeScript", "性能优化"))
+                            .build()
             );
             ResumeParseResult result = ResumeParseResult.builder()
                     .resumeId(resume.getId())
-                    .keywordCoverage(snapshot.getKeywordCoverage())
-                    .basicInfo(objectMapper.writeValueAsString(snapshot.getBasicInfo()))
-                    .workExperience(snapshot.getWorkExperience())
-                    .skills(objectMapper.writeValueAsString(snapshot.getSkills()))
-                    .workHistory(objectMapper.writeValueAsString(snapshot.getWorkHistory()))
-                    .aiSummary(snapshot.getAiSummary())
-                    .improvementSuggestions(snapshot.getImprovementSuggestions())
+                    .basicInfo(objectMapper.writeValueAsString(basicInfo))
+                    .workExperience("5年")
+                    .skills(objectMapper.writeValueAsString(skills))
+                    .workHistory(objectMapper.writeValueAsString(workHistory))
                     .build();
             resumeParseResultMapper.insert(result);
         }

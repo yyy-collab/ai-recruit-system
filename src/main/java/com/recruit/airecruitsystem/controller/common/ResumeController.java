@@ -35,7 +35,7 @@ public class ResumeController {
             case ResultCode.SUCCESS -> Result.success("简历上传成功", vo);
             case ResultCode.INFO_INCOMPLETE -> Result.error(ResultCode.INFO_INCOMPLETE, "请先完善真实姓名、电话和邮箱后再上传简历");
             case ResultCode.RESUME_EXIST -> Result.error(ResultCode.RESUME_EXIST, "已上传过简历，请先删除后再重新上传");
-            case ResultCode.FILE_FORMAT_ERROR -> Result.error(ResultCode.FILE_FORMAT_ERROR, "仅支持 PDF / DOC / DOCX 格式");
+            case ResultCode.FILE_FORMAT_ERROR -> Result.error(ResultCode.FILE_FORMAT_ERROR, "仅支持 DOC / DOCX 格式");
             case ResultCode.FILE_TOO_LARGE -> Result.error(ResultCode.FILE_TOO_LARGE, "文件大小不能超过 20MB");
             default -> Result.error(ResultCode.PARAM_ERROR, "简历上传失败");
         };
