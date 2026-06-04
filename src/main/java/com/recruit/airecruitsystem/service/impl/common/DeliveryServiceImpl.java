@@ -69,7 +69,8 @@ public class DeliveryServiceImpl implements DeliveryService {
             }
 
             // 2. 防重复投递
-            boolean exists = deliveryMapper.existsByJobAndSeeker(delivery.getJobId(), delivery.getSeekerId());
+            boolean exists = deliveryMapper
+                    .existsByJobAndSeeker(delivery.getJobId(), delivery.getSeekerId());
             if (exists) {
                 return Result.error(10012, "不能重复投递同一岗位");
             }
