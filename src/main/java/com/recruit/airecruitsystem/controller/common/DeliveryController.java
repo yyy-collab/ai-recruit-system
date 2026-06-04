@@ -2,7 +2,10 @@ package com.recruit.airecruitsystem.controller.common;
 
 import com.recruit.airecruitsystem.dto.hr.BatchDeliveryStatusUpdateDTO;
 import com.recruit.airecruitsystem.dto.hr.DeliveryStatusUpdateDTO;
+import com.recruit.airecruitsystem.mapper.ResumeMapper;
 import com.recruit.airecruitsystem.pojo.Delivery;
+import com.recruit.airecruitsystem.pojo.Resume;
+import com.recruit.airecruitsystem.utils.JwtUtil;
 import com.recruit.airecruitsystem.result.Result;
 import com.recruit.airecruitsystem.service.common.DeliveryService;
 import jakarta.validation.Valid;
@@ -10,12 +13,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class DeliveryController {
 
     @Autowired
     private DeliveryService deliveryService;
+    @Autowired
+    private ResumeMapper resumeMapper;
+    @Autowired
+    private JwtUtil jwtUtil;
 
     // ==========================
     // 【求职者接口】
@@ -25,7 +33,25 @@ public class DeliveryController {
      * 1. 投递岗位（含匹配引擎）
      */
     @PostMapping("/seeker/delivery/add")
-    public Result addDelivery(@RequestBody Delivery delivery) {
+    public Result addDelivery(@RequestBody Map<String,Integer> req,
+                              @RequestHeader("Authorization") String token) {
+        // 剔除Bearer 前缀
+        if(token.startsWith("Bearer ")){
+            token = token.substring(7);
+        }
+        // 手动从请求头token解析用户ID
+        Integer seekerId = jwtUtil.getUserId(token);
+        Delivery delivery = new Delivery();
+        delivery.setJobId(req.get("job_id"));
+        delivery.setSeekerId(seekerId);
+
+        // 根据用户查简历自动填充resume_id
+        Resume resume = resumeMapper.selectBySeekerId(seekerId);
+        if(resume == null){
+            return Result.error(10006, "未上传简历，无法投递");
+        }
+        delivery.setResumeId(resume.getId());
+
         return deliveryService.addDelivery(delivery);
     }
 
