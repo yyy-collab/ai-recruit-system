@@ -55,8 +55,31 @@ public class AiController {
         if ("text".equals(type)) {
             content = (String) request.get("content");
         } else if ("resume".equals(type)) {
-            // 根据 resumeId 从数据库查询简历解析后的文本
-            return Result.error(10006, "简历文本获取未实现，请先完善");
+            if (resumeId == null) {
+                return Result.error(10001, "resume_id 不能为空");
+            }
+            // 查询简历解析结果
+            ResumeParseResult parseResult = resumeParseResultMapper.selectByResumeId(resumeId);
+            if (parseResult == null) {
+                return Result.error(10017, "简历解析结果不存在，请重新上传");
+            }
+            // 拼接文本（与 calculateMatch 中的逻辑一致）
+            StringBuilder sb = new StringBuilder();
+            if (parseResult.getSkills() != null) {
+                String skills = parseResult.getSkills().replaceAll("[\\[\\]\"]", "").replace(",", " ");
+                sb.append(skills).append(" ");
+            }
+            if (parseResult.getWorkExperience() != null) {
+                sb.append(parseResult.getWorkExperience()).append(" ");
+            }
+            if (parseResult.getWorkHistory() != null) {
+                String history = parseResult.getWorkHistory().replaceAll("[\\[\\]{}\"]", "").replace(",", " ");
+                sb.append(history);
+            }
+            content = sb.toString().trim();
+            if (content.isEmpty()) {
+                return Result.error(10017, "简历文本为空，请重新上传并等待解析");
+            }
         } else if ("job".equals(type)) {
             if (jobId == null) {
                 return Result.error(10001, "job_id 不" +
@@ -93,6 +116,7 @@ public class AiController {
 
     @PostMapping("/match/calculate")
     public Result calculateMatch(@RequestBody Map<String, Integer> request) {
+
         Integer jobId = request.get("job_id");
         Integer resumeId = request.get("resume_id");
         if (jobId == null || resumeId == null) {
@@ -146,7 +170,11 @@ public class AiController {
         if (resumeText.isEmpty()) {
             return Result.error(10017, "简历文本为空，请重新上传并等待解析");
         }
-
+        System.out.println("===== 岗位文本 =====");
+        System.out.println(jobText);
+        System.out.println("===== 简历文本 =====");
+        System.out.println(resumeText);
+        System.out.println("==================");
 
         // 调用匹配服务计算分数
         double score = matchCalculateService.calculateMatch(jobText, resumeText);
@@ -180,8 +208,29 @@ public class AiController {
             String history = parseResult.getWorkHistory().replaceAll("[\\[\\]{}\"]", "").replace(",", " ");
             sb.append(history);
         }
-        return sb.toString().trim();
+        if (parseResult.getSkills() != null) {
+            String skills = parseResult.getSkills()
+                    .replaceAll("[\\[\\]\"]", "")
+                    .replace(",", " ")
+                    .replaceAll("\\s+", " ");
+            sb.append(skills).append(" ");
+        }
+
+        // 4. 工作经历：只保留核心描述和技能，去掉所有JSON字段名
+        if (parseResult.getWorkHistory() != null) {
+            String history = parseResult.getWorkHistory()
+                    .replaceAll("[\\[\\]{}\"]", "")
+                    .replaceAll("(company|position|startTime|endTime|description|coreSkills):", " ")
+                    .replaceAll("\\d{4}\\.\\d{2}", " ") // 去掉时间
+                    .replaceAll("至今", " ")
+                    .replace(",", " ")
+                    .replaceAll("\\s+", " ");
+            sb.append(history);
+        }
+
+        return sb.toString().trim().toLowerCase();
     }
+
     @PostMapping("/match/recalculate")
     @Transactional
     public Result recalculateMatch(@RequestBody Map<String, Integer> request) {

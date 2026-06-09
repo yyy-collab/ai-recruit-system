@@ -71,45 +71,71 @@ public class MatchCalculateService {
     // 微调加分
     private int getExtraScore(String jobText, String resumeText) {
         int extra = 0;
-        if (jobText.contains("本科") && resumeText.contains("本科")) extra += 3;
-        if (jobText.contains("硕士") && resumeText.contains("硕士")) extra += 3;
-        if (jobText.contains("3年") && resumeText.contains("3年")) extra += 2;
-        return Math.min(extra, 10);
+
+        // 1. 核心技能强加权（每个词加10分）
+        List<String> coreSkills = Arrays.asList("vue 3", "typescript", "llm 应用", "性能优化", "协同编辑", "前端架构");
+        for (String skill : coreSkills) {
+            if (jobText.contains(skill) && resumeText.contains(skill)) {
+                extra += 10;
+            }
+        }
+
+        // 2. 学历匹配加分
+        if (jobText.contains("本科") && resumeText.contains("本科")) {
+            extra += 8;
+        }
+
+        // 3. 工作年限匹配加分（3-5年 与 4.5年 视为匹配）
+        if ((jobText.contains("3-5年") || jobText.contains("3年以上"))
+                && resumeText.contains("4.5年")) {
+            extra += 8;
+        }
+
+        // 加分上限提高到 30 分
+        return Math.min(extra, 30);
     }
 
     /**
      * 计算匹配度（带缓存）
      */
     public double calculateMatch(String jobText, String resumeText) {
-        // 生成缓存 key
         String cacheKey = jobText.hashCode() + "_" + resumeText.hashCode();
 
-        // 1. 查缓存
         Double cached = matchCache.get(cacheKey);
         if (cached != null) {
             return cached;
         }
 
-        //计算匹配度
         Map<String, Double> jobVec = textToVector(jobText);
         Map<String, Double> resumeVec = textToVector(resumeText);
         double baseScore = cosineSimilarity(jobVec, resumeVec);
+
+        // 基础分 0~70
+        double baseScore100 = baseScore * 70;
+
+        // 加分 0~20（封顶！！！）
         int extra = getExtraScore(jobText, resumeText);
-        double finalScore = baseScore + extra;
-        if (finalScore > 100) finalScore = 100;
+        extra = Math.min(extra, 20);
 
-        // 存入缓存
+        // 最终分 0~90
+        double finalScore = baseScore100 + extra;
+
+        // 最高 95，避免 100 分泛滥
+        finalScore = Math.min(finalScore, 95);
+
         matchCache.put(cacheKey, finalScore);
-
         return finalScore;
     }
 
     // 根据分数返回等级
     public String getMatchLevel(double score) {
-        if (score >= 90) return "极高潜力";
-        if (score >= 75) return "高潜力";
-        if (score >= 60) return "中等潜力";
-        return "低潜力";
+        if (score >= 70) {
+            return "高潜力";
+        } else if (score >= 40) {
+            return "中潜力";
+        } else {
+            return "低潜力";
+        }
     }
 
     //删除缓存
