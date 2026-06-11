@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class DeliveryController {
@@ -25,8 +26,45 @@ public class DeliveryController {
      * 1. 投递岗位（含匹配引擎）
      */
     @PostMapping("/seeker/delivery/add")
-    public Result addDelivery(@RequestBody Delivery delivery) {
+    public Result addDelivery(@RequestBody Object requestBody) {
+        Integer jobId = extractJobId(requestBody);
+        if (jobId == null) {
+            return Result.error(10002, "岗位ID不能为空");
+        }
+
+        Delivery delivery = new Delivery();
+        delivery.setJobId(jobId);
         return deliveryService.addDelivery(delivery);
+    }
+
+    private Integer extractJobId(Object requestBody) {
+        if (requestBody == null) {
+            return null;
+        }
+        if (requestBody instanceof Number) {
+            return ((Number) requestBody).intValue();
+        }
+        if (requestBody instanceof String) {
+            try {
+                return Integer.valueOf((String) requestBody);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        if (requestBody instanceof Map) {
+            Object value = ((Map<?, ?>) requestBody).get("jobId");
+            if (value instanceof Number) {
+                return ((Number) value).intValue();
+            }
+            if (value instanceof String) {
+                try {
+                    return Integer.valueOf((String) value);
+                } catch (NumberFormatException ignored) {
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 
     /**

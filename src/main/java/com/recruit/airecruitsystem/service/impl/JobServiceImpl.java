@@ -50,9 +50,11 @@ public class JobServiceImpl implements JobService {
         if (hr == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "HR信息不存在");
         }
-//        if (!StringUtils.hasText(hr.getCompanyName())) {
-//            throw new BusinessException(ResultCode.INFO_INCOMPLETE, "请先完善个人信息后再进行此操作");
-//        }
+        if (!StringUtils.hasText(hr.getCompanyName())
+                || !StringUtils.hasText(hr.getRealName())
+                || !StringUtils.hasText(hr.getPhone())) {
+            throw new BusinessException(ResultCode.INFO_INCOMPLETE, "请先完善真实姓名、电话和公司名称后再发布岗位");
+        }
 
         Job job = new Job();
         job.setHrId(hrId);

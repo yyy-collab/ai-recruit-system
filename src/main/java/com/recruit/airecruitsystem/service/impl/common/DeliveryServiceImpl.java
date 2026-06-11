@@ -60,12 +60,28 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Override
     public Result addDelivery(Delivery delivery) {
         try {
-            // 1. 参数校验
-            if (delivery.getSeekerId() == null || delivery.getJobId() == null) {
-                return Result.error(10002, "求职者ID或岗位ID不能为空");
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return Result.error(10007, "用户未登录");
             }
+            HttpServletRequest request = attrs.getRequest();
+            Integer seekerId = jwtUtil.getUserIdFromRequest(request);
+            if (seekerId == null) {
+                return Result.error(10007, "用户未登录");
+            }
+
+            // 1. 参数校验
+            if (delivery.getJobId() == null) {
+                return Result.error(10002, "岗位ID不能为空");
+            }
+            delivery.setSeekerId(seekerId);
+
             if (delivery.getResumeId() == null) {
-                return Result.error(10003, "简历ID不能为空");
+                Resume resume = resumeMapper.selectBySeekerId(seekerId);
+                if (resume == null) {
+                    return Result.error(10018, "请先上传简历后再投递");
+                }
+                delivery.setResumeId(resume.getId());
             }
 
             // 2. 防重复投递

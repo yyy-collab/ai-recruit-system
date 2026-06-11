@@ -13,6 +13,9 @@ public class PasswordEncoder {
 
     // 验证：明文密码与哈希是否匹配
     public boolean matches(String rawPassword, String encodedPassword) {
+        System.out.println("---------------------------------");
+        System.out.println(rawPassword);
+        System.out.println(encodedPassword);
         return BCrypt.checkpw(rawPassword, encodedPassword);
     }
 }

@@ -58,6 +58,7 @@ public interface DeliveryMapper {
     @Select("SELECT * FROM delivery WHERE job_id = #{jobId} ORDER BY delivery_time DESC")
     List<Delivery> selectByJobId(Integer jobId);
 
+    @Select("SELECT * FROM delivery WHERE seeker_id = #{seekerId} AND status = #{status}")
     List<Delivery> selectBySeekerIdAndStatus(
             @Param("seekerId") Integer seekerId,
             @Param("status") Integer status

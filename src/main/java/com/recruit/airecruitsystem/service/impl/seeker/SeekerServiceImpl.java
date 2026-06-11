@@ -110,6 +110,8 @@ public class SeekerServiceImpl implements SeekerService {
 
         //密码校验
         if(!passwordEncoder.matches(password,seeker.getPassword())){
+            System.out.println("11111111111111111");
+            System.out.println(seeker.getPassword());
             return ResultCode.LOGIN_ERROR;//密码为空
         }
 

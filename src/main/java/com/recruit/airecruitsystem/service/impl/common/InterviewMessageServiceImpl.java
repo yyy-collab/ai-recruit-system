@@ -1,7 +1,6 @@
 package com.recruit.airecruitsystem.service.impl.common;
 
 import com.github.pagehelper.PageHelper;
-import com.github.pagehelper.PageInfo;
 import com.recruit.airecruitsystem.constant.ResultCode;
 import com.recruit.airecruitsystem.enums.InterviewRoundEnum;
 import com.recruit.airecruitsystem.enums.InterviewTypeEnum;
@@ -11,6 +10,7 @@ import com.recruit.airecruitsystem.pojo.*;
 import com.recruit.airecruitsystem.dto.seeker.HandleInterviewRequest;
 import com.recruit.airecruitsystem.dto.hr.SendInterviewRequest;
 import com.recruit.airecruitsystem.service.common.InterviewMessageService;
+import com.recruit.airecruitsystem.vo.common.PageResult;
 import com.recruit.airecruitsystem.vo.hr.HrMessageDetailVO;
 import com.recruit.airecruitsystem.vo.hr.HrMessageListItemVO;
 import com.recruit.airecruitsystem.vo.seeker.SeekerMessageDetailVO;
@@ -49,6 +49,9 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
         }
         Delivery delivery = deliveryMapper.selectById(request.getDeliveryId());
         if (delivery == null) return ResultCode.NOT_FOUND;
+        if (!Integer.valueOf(1).equals(delivery.getStatus())) {
+            return ResultCode.PARAM_ERROR;
+        }
         Job job = jobMapper.selectById(delivery.getJobId());
         if (job == null || !job.getHrId().equals(hrId)) return ResultCode.PARAM_ERROR;
 
@@ -74,13 +77,12 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
     }
 
     @Override
-    public PageInfo<HrMessageListItemVO> getHrMessageList(Integer hrId, Integer status, int pageNum, int pageSize) {
-        // 启用 PageHelper 分页
+    public PageResult<HrMessageListItemVO> getHrMessageList(Integer hrId, Integer status, int pageNum, int pageSize) {
         PageHelper.startPage(pageNum, pageSize);
         List<InterviewMessage> messages = interviewMessageMapper.selectByHrId(hrId, status);
         // 转换为 VO
         List<HrMessageListItemVO> voList = messages.stream().map(msg -> {
-            Seeker seeker = seekerMapper.findById(msg.getSeekerId());
+            Seeker seeker = seekerMapper.findById(msg.getSeekerId()); // 改为 selectById
             String seekerName = seeker != null ? seeker.getRealName() : "";
             String jobName = "";
             Delivery delivery = deliveryMapper.selectById(msg.getDeliveryId());
@@ -102,14 +104,12 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
             return vo;
         }).collect(Collectors.toList());
 
-        // 构造 PageInfo 并返回
-        PageInfo<HrMessageListItemVO> pageInfo = new PageInfo<>(voList);
-        // 由于我们使用了 PageHelper，messages 实际上是一个 Page 对象，可以获取 total
+        // 获取总记录数
+        long total = 0;
         if (messages instanceof com.github.pagehelper.Page) {
-            long total = ((com.github.pagehelper.Page<?>) messages).getTotal();
-            pageInfo.setTotal(total);
+            total = ((com.github.pagehelper.Page<?>) messages).getTotal();
         }
-        return pageInfo;
+        return new PageResult<>(total, voList);
     }
 
     @Override
@@ -162,7 +162,7 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
     }
 
     @Override
-    public PageInfo<SeekerMessageListItemVO> getSeekerMessageList(Integer seekerId, Integer status, int pageNum, int pageSize) {
+    public PageResult<SeekerMessageListItemVO> getSeekerMessageList(Integer seekerId, Integer status, int pageNum, int pageSize) {
         PageHelper.startPage(pageNum, pageSize);
         List<InterviewMessage> messages = interviewMessageMapper.selectBySeekerId(seekerId, status);
         List<SeekerMessageListItemVO> voList = messages.stream().map(msg -> {
@@ -190,11 +190,11 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
             return vo;
         }).collect(Collectors.toList());
 
-        PageInfo<SeekerMessageListItemVO> pageInfo = new PageInfo<>(voList);
+        long total = 0;
         if (messages instanceof com.github.pagehelper.Page) {
-            pageInfo.setTotal(((com.github.pagehelper.Page<?>) messages).getTotal());
+            total = ((com.github.pagehelper.Page<?>) messages).getTotal();
         }
-        return pageInfo;
+        return new PageResult<>(total, voList);
     }
 
     @Override

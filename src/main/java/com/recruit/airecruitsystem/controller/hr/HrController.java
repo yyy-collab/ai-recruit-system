@@ -9,11 +9,13 @@ import com.recruit.airecruitsystem.service.common.InterviewMessageService;
 import com.recruit.airecruitsystem.service.hr.HrService;
 import com.recruit.airecruitsystem.utils.JwtUtil;
 import com.recruit.airecruitsystem.utils.UserContext;
+import com.recruit.airecruitsystem.vo.common.PageResult;
 import com.recruit.airecruitsystem.vo.common.TokenRefreshVO;
 import com.recruit.airecruitsystem.vo.hr.HrInfoVO;
 import com.recruit.airecruitsystem.vo.hr.HrLoginVO;
 import com.recruit.airecruitsystem.vo.hr.HrMessageDetailVO;
 import com.recruit.airecruitsystem.vo.hr.HrMessageListItemVO;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -218,7 +220,7 @@ public class HrController {
 
     // HR消息列表
     @GetMapping("/message/list")
-    public Result<PageInfo<HrMessageListItemVO>> getHrMessageList(
+    public Result<PageResult<HrMessageListItemVO>> getHrMessageList(
             @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize) {
@@ -226,8 +228,8 @@ public class HrController {
         if (hrId == null) {
             return Result.error(ResultCode.TOKEN_EXPIRED, "令牌无效或已过期");
         }
-        PageInfo<HrMessageListItemVO> pageInfo = interviewMessageService.getHrMessageList(hrId, status, pageNum, pageSize);
-        return Result.success("操作成功", pageInfo);
+        PageResult<HrMessageListItemVO> result = interviewMessageService.getHrMessageList(hrId, status, pageNum, pageSize);
+        return Result.success("操作成功", result);
     }
 
     @GetMapping("/message/detail")
