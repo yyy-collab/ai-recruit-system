@@ -26,6 +26,7 @@ public class CorpusManager {
 
     @PostConstruct
     public void init() {
+
         //从数据库加载所有岗位的描述文本
         List<Job> jobs = jobMapper.selectAllOnline();
         if (jobs != null && !jobs.isEmpty()) {
@@ -59,6 +60,13 @@ public class CorpusManager {
         }
         totalDocs = documents.size();
         System.out.println("语料库初始化完成，文档数：" + totalDocs + "，不同词数：" + docFreq.size());
+        List<Job> jobss = jobMapper.selectAllOnline();
+        System.out.println("数据库查询到岗位数量：" + (jobss == null ? 0 : jobss.size()));
+        if (jobss != null && !jobss.isEmpty()) {
+            for (Job job : jobss) {
+                System.out.println("岗位ID：" + job.getId() + ", 名称：" + job.getJobName());
+            }
+        }
     }
 
     // 将一篇文本分词后加入语料库
@@ -86,10 +94,13 @@ public class CorpusManager {
     public double getIdf(String word) {
         Integer df = docFreq.get(word);
         if (df == null || df == 0) {
-            // 未出现过的词，IDF 取 log(totalDocs + 1)
-            return Math.log((totalDocs + 1) / 1.0);
+            // 原逻辑：return Math.log((totalDocs + 1) / 1.0);
+            // 优化：固定最小总文档数为20，避免totalDocs过小时IDF异常
+            int minTotalDocs = Math.max(totalDocs, 20);
+            return Math.log((minTotalDocs + 1) / 1.0);
         }
-        // IDF = log( 总文档数 / (1 + DF) )
-        return Math.log((double) totalDocs / (1 + df));
+        // 优化：同样兜底总文档数
+        int minTotalDocs = Math.max(totalDocs, 20);
+        return Math.log((double) minTotalDocs / (1 + df));
     }
 }

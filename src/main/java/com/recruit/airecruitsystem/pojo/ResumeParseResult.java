@@ -14,13 +14,10 @@ import java.time.LocalDateTime;
 public class ResumeParseResult {
     private Integer id;
     private Integer resumeId;
-    private Integer keywordCoverage;
     private String basicInfo;
     private String workExperience;
     private String skills;
     private String workHistory;
-    private String aiSummary;
-    private String improvementSuggestions;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

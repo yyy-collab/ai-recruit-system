@@ -85,7 +85,8 @@ public class DeliveryServiceImpl implements DeliveryService {
             }
 
             // 2. 防重复投递
-            boolean exists = deliveryMapper.existsByJobAndSeeker(delivery.getJobId(), delivery.getSeekerId());
+            boolean exists = deliveryMapper
+                    .existsByJobAndSeeker(delivery.getJobId(), delivery.getSeekerId());
             if (exists) {
                 return Result.error(10012, "不能重复投递同一岗位");
             }
@@ -96,6 +97,10 @@ public class DeliveryServiceImpl implements DeliveryService {
             if (seeker == null || job == null) {
                 return Result.error(10006, "资源不存在");
             }
+            // ==========校验岗位状态 1上线可投、0下线不可投递==========
+            if(job.getStatus() == 0){
+                return Result.error(10018, "该岗位已下线，无法投递");
+            }
 
             // ====================== 简历解析状态校验 ======================
             Resume resume = resumeMapper.selectById(delivery.getResumeId());
@@ -103,10 +108,10 @@ public class DeliveryServiceImpl implements DeliveryService {
                 return Result.error(10006, "简历不存在");
             }
             Integer isParsed = resume.getIsParsed();
-            if (isParsed == null || isParsed == 0) {
+            if (isParsed == null || isParsed == 0 || isParsed == 2) {
                 return Result.error(10016, "简历解析中，暂无法投递");
             }
-            if (isParsed == 2) {
+            if (isParsed == 3) {
                 return Result.error(10017, "简历解析失败，无法投递");
             }
             // =======================================================================
@@ -280,11 +285,12 @@ public class DeliveryServiceImpl implements DeliveryService {
             Map<String, Object> resumeInfo = new HashMap<>();
             resumeInfo.put("resume_id", rawData.get("resume_id"));
             resumeInfo.put("resume_file_url", rawData.get("resume_file_url"));
-            resumeInfo.put("keyword_coverage", rawData.get("keyword_coverage"));
 
             Map<String, Object> parsedData = new HashMap<>();
+            parsedData.put("basic_info", rawData.get("basic_info"));
             parsedData.put("work_experience", rawData.get("work_experience"));
             parsedData.put("skills", rawData.get("skills"));
+            parsedData.put("work_history", rawData.get("work_history"));
             resumeInfo.put("parsed_data", parsedData);
             data.put("resume_info", resumeInfo);
 

@@ -37,7 +37,6 @@ public class HrResumeDetailVO {
         private Integer resumeId;
         private String resumeFileUrl;
         private String resumeFileName;
-        private Integer keywordCoverage;
         private String workExperience;
         private List<String> skills;
         private List<ResumeAnalysisSnapshot.WorkHistoryItem> workHistory;
