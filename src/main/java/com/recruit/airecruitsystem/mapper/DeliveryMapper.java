@@ -112,7 +112,10 @@ public interface DeliveryMapper {
             + "LEFT JOIN resume r ON d.resume_id = r.id "
             + "LEFT JOIN ai_match_result am ON d.id = am.delivery_id "
             + "WHERE d.job_id = #{jobId} "
-            + "<if test='status != null'>AND d.status = #{status}</if>"
+            + "<choose>"
+            + "<when test='status != null'>AND d.status = #{status}</when>"
+            + "<otherwise>AND d.status != 1</otherwise>"
+            + "</choose>"
             + "</script>")
     List<Map<String, Object>> selectHrDeliveryList(
             @Param("jobId") Integer jobId,

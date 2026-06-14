@@ -7,6 +7,8 @@ import com.recruit.airecruitsystem.mapper.DeliveryMapper;
 import com.recruit.airecruitsystem.mapper.JobMapper;
 import com.recruit.airecruitsystem.mapper.ResumeMapper;
 import com.recruit.airecruitsystem.mapper.SeekerMapper;
+import com.recruit.airecruitsystem.mapper.AiMatchResultMapper;
+import com.recruit.airecruitsystem.pojo.AiMatchResult;
 import com.recruit.airecruitsystem.pojo.Delivery;
 import com.recruit.airecruitsystem.pojo.Job;
 import com.recruit.airecruitsystem.pojo.Resume;
@@ -46,6 +48,9 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     @Autowired
     private ResumeMapper resumeMapper;
+
+    @Autowired
+    private AiMatchResultMapper aiMatchResultMapper;
 
     // ====================== 注入AI接口 ======================
     @Autowired
@@ -133,6 +138,12 @@ public class DeliveryServiceImpl implements DeliveryService {
             // 5. 插入投递记录
             delivery.setStatus(0);
             deliveryMapper.insert(delivery);
+            jobMapper.incrementDeliveryCount(delivery.getJobId());
+            AiMatchResult matchResult = new AiMatchResult();
+            matchResult.setDeliveryId(delivery.getId());
+            matchResult.setMatchScore(scoreDouble);
+            matchResult.setMatchLevel(level);
+            aiMatchResultMapper.insert(matchResult);
 
             // 6. 返回结果
             Map<String, Object> map = new HashMap<>();
