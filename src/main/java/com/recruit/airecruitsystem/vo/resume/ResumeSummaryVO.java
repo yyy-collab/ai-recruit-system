@@ -11,4 +11,5 @@ public class ResumeSummaryVO {
     private String resumeFileUrl;
     private Integer isParsed;
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

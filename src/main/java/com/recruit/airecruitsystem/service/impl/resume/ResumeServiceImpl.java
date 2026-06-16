@@ -87,8 +87,11 @@ public class ResumeServiceImpl implements ResumeService {
         if (file == null || file.isEmpty()) {
             return ResultCode.PARAM_ERROR;
         }
-        if (resumeMapper.selectBySeekerId(seekerId) != null) {
-            return ResultCode.RESUME_EXIST;
+
+        Resume currentResume = resumeMapper.selectCurrentBySeekerId(seekerId);
+        boolean replacingResume = currentResume != null;
+        if (replacingResume && deliveryMapper.countPendingBySeekerId(seekerId) > 0) {
+            return ResultCode.RESUME_UPDATE_BLOCKED;
         }
 
         String extension = resolveExtension(file.getOriginalFilename());
@@ -99,26 +102,13 @@ public class ResumeServiceImpl implements ResumeService {
             return ResultCode.FILE_TOO_LARGE;
         }
 
-        Resume resume = null;
         try {
             StoredResumeFile storedFile = storeResumeFile(seekerId, file, extension);
-            resume = Resume.builder()
-                    .seekerId(seekerId)
-                    .fileName(resolveOriginalFileName(file, extension))
-                    .fileUrl(storedFile.fileUrl())
-                    .isParsed(2)
-                    .build();
-            resumeMapper.insert(resume);
-            parseAndPersist(resume, storedFile.path(), extension);
-            resumeMapper.updateParseStatus(resume.getId(), 1, null);
-
-            Resume latest = resumeMapper.selectById(resume.getId());
-            copySummary(latest, vo);
-            return ResultCode.SUCCESS;
+            String fileName = resolveOriginalFileName(file, extension);
+            return replacingResume
+                    ? replaceResume(currentResume, storedFile, fileName, extension, vo)
+                    : createResume(seekerId, storedFile, fileName, extension, vo);
         } catch (IOException e) {
-            if (resume != null && resume.getId() != null) {
-                resumeMapper.updateParseStatus(resume.getId(), 3, trimMessage(e.getMessage()));
-            }
             return ResultCode.PARAM_ERROR;
         }
     }
@@ -129,7 +119,7 @@ public class ResumeServiceImpl implements ResumeService {
         if (seekerId == null) {
             return list;
         }
-        Resume resume = resumeMapper.selectBySeekerId(seekerId);
+        Resume resume = resumeMapper.selectCurrentBySeekerId(seekerId);
         if (resume != null) {
             ResumeSummaryVO vo = new ResumeSummaryVO();
             copySummary(resume, vo);
@@ -257,7 +247,7 @@ public class ResumeServiceImpl implements ResumeService {
         resumeInfo.setWorkExperience(snapshot.getWorkExperience());
         resumeInfo.setSkills(snapshot.getSkills());
         resumeInfo.setWorkHistory(snapshot.getWorkHistory());
-        resumeInfo.setPreviewText(buildPreviewText(snapshot));
+        resumeInfo.setPreviewText(buildOriginalPreviewText(resume));
 
         HrResumeDetailVO vo = new HrResumeDetailVO();
         vo.setDeliveryId(delivery.getId());
@@ -274,6 +264,70 @@ public class ResumeServiceImpl implements ResumeService {
     private void parseAndPersist(Resume resume, Path filePath, String extension) throws IOException {
         ResumeAnalysisSnapshot snapshot = resumeDocumentParser.parse(filePath, extension, resume.getFileName());
         persistSnapshot(resume.getId(), snapshot);
+    }
+
+    private int createResume(Integer seekerId,
+                             StoredResumeFile storedFile,
+                             String fileName,
+                             String extension,
+                             ResumeSummaryVO vo) {
+        Resume resume = null;
+        try {
+            resume = Resume.builder()
+                    .seekerId(seekerId)
+                    .fileName(fileName)
+                    .fileUrl(storedFile.fileUrl())
+                    .isParsed(2)
+                    .build();
+            resumeMapper.insert(resume);
+            parseAndPersist(resume, storedFile.path(), extension);
+            resumeMapper.updateParseStatus(resume.getId(), 1, null);
+
+            Resume latest = resumeMapper.selectById(resume.getId());
+            copySummary(latest, vo);
+            return ResultCode.SUCCESS;
+        } catch (IOException e) {
+            if (resume != null && resume.getId() != null) {
+                resumeMapper.updateParseStatus(resume.getId(), 3, trimMessage(e.getMessage()));
+            }
+            return ResultCode.PARAM_ERROR;
+        }
+    }
+
+    private int replaceResume(Resume currentResume,
+                              StoredResumeFile storedFile,
+                              String fileName,
+                              String extension,
+                              ResumeSummaryVO vo) {
+        String oldFileName = currentResume.getFileName();
+        String oldFileUrl = currentResume.getFileUrl();
+        Integer oldIsParsed = currentResume.getIsParsed();
+        String oldParseFailReason = currentResume.getParseFailReason();
+
+        currentResume.setFileName(fileName);
+        currentResume.setFileUrl(storedFile.fileUrl());
+        currentResume.setIsParsed(2);
+        currentResume.setParseFailReason(null);
+
+        try {
+            // Single-resume mode: overwrite the existing row instead of creating a versioned record.
+            resumeMapper.updateFileInfo(currentResume);
+            parseAndPersist(currentResume, storedFile.path(), extension);
+            resumeMapper.updateParseStatus(currentResume.getId(), 1, null);
+
+            deleteStoredFile(oldFileUrl);
+            Resume latest = resumeMapper.selectById(currentResume.getId());
+            copySummary(latest, vo);
+            return ResultCode.SUCCESS;
+        } catch (IOException e) {
+            currentResume.setFileName(oldFileName);
+            currentResume.setFileUrl(oldFileUrl);
+            currentResume.setIsParsed(oldIsParsed);
+            currentResume.setParseFailReason(oldParseFailReason);
+            resumeMapper.updateFileInfo(currentResume);
+            deleteStoredFile(storedFile.fileUrl());
+            return ResultCode.PARAM_ERROR;
+        }
     }
 
     private void persistSnapshot(Integer resumeId, ResumeAnalysisSnapshot snapshot) throws IOException {
@@ -416,6 +470,7 @@ public class ResumeServiceImpl implements ResumeService {
         vo.setResumeFileUrl(resume.getFileUrl());
         vo.setIsParsed(resume.getIsParsed());
         vo.setCreateTime(resume.getCreateTime());
+        vo.setUpdateTime(resume.getUpdateTime());
     }
 
     private String buildOriginalPreviewText(Resume resume) {

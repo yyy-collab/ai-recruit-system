@@ -52,6 +52,9 @@ public interface DeliveryMapper {
     @Select("SELECT * FROM delivery WHERE seeker_id = #{seekerId} ORDER BY delivery_time DESC")
     List<Delivery> selectBySeekerId(Integer seekerId);
 
+    @Select("SELECT COUNT(*) FROM delivery WHERE seeker_id = #{seekerId} AND status = 0")
+    int countPendingBySeekerId(Integer seekerId);
+
     /**
      * 查询某个岗位下的所有投递记录（HR查看）
      */
