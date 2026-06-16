@@ -68,6 +68,14 @@ public class ResumeDocumentParser {
                 .build();
     }
 
+    public String extractPreviewText(Path file, String extension) throws IOException {
+        String text = normalizeText(extractText(file, extension));
+        if (!StringUtils.hasText(text)) {
+            throw new IOException("Apache POI未提取到简历文本");
+        }
+        return text;
+    }
+
     private String extractText(Path file, String extension) throws IOException {
         String normalizedExtension = extension == null ? "" : extension.toLowerCase(Locale.ROOT);
         return switch (normalizedExtension) {

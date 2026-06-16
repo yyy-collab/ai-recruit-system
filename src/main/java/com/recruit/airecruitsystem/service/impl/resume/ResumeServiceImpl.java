@@ -169,11 +169,9 @@ public class ResumeServiceImpl implements ResumeService {
         if (!ownsResume(resume, seekerId)) {
             return ResultCode.NOT_FOUND;
         }
-
-        ResumeAnalysisSnapshot snapshot = buildSnapshot(resume);
         vo.setResumeId(resume.getId());
         vo.setResumeFileName(resume.getFileName());
-        vo.setPreviewText(buildPreviewText(snapshot));
+        vo.setPreviewText(buildOriginalPreviewText(resume));
         return ResultCode.SUCCESS;
     }
 
@@ -418,6 +416,19 @@ public class ResumeServiceImpl implements ResumeService {
         vo.setResumeFileUrl(resume.getFileUrl());
         vo.setIsParsed(resume.getIsParsed());
         vo.setCreateTime(resume.getCreateTime());
+    }
+
+    private String buildOriginalPreviewText(Resume resume) {
+        try {
+            String extension = resolveExtension(resume.getFileName());
+            if (!ALLOWED_EXTENSIONS.contains(extension)) {
+                extension = resolveExtension(resume.getFileUrl());
+            }
+            Path filePath = resolveStoredFilePath(resume.getFileUrl());
+            return resumeDocumentParser.extractPreviewText(filePath, extension);
+        } catch (IOException e) {
+            return buildPreviewText(buildSnapshot(resume));
+        }
     }
 
     private String buildPreviewText(ResumeAnalysisSnapshot snapshot) {
