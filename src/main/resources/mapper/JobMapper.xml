@@ -99,11 +99,16 @@
     <select id="selectSeekerJobList" resultType="com.recruit.airecruitsystem.dto.job.SeekerJobListItemResponse">
         SELECT j.id,
                j.job_name,
+               j.job_desc,
                j.salary,
                j.work_address,
+               j.work_experience,
+               j.keywords,
                h.company_name,
+               j.status,
                j.create_time,
-               amr.match_score
+               amr.match_score,
+               CASE WHEN d.id IS NULL THEN FALSE ELSE TRUE END AS is_delivered
         FROM job j
                  INNER JOIN hr h ON j.hr_id = h.id
                  LEFT JOIN delivery d ON d.job_id = j.id AND d.seeker_id = #{seekerId}
