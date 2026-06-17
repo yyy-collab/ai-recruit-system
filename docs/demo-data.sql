@@ -59,12 +59,11 @@ INSERT INTO resume (seeker_id, file_name, file_url, is_parsed, parse_fail_reason
 SELECT s.id, CONCAT(s.real_name, '-演示简历.docx'), CONCAT('/upload/resume/demo/', s.username, '.docx'), 1, NULL, NOW(), NOW()
 FROM seeker s
 WHERE s.username IN ('demo_sk1', 'demo_sk2', 'demo_sk3', 'demo_sk4')
-ON DUPLICATE KEY UPDATE
-  file_name = VALUES(file_name),
-  file_url = VALUES(file_url),
-  is_parsed = 1,
-  parse_fail_reason = NULL,
-  update_time = NOW();
+  AND NOT EXISTS (
+    SELECT 1 FROM resume r0
+    WHERE r0.seeker_id = s.id
+      AND r0.file_url = CONCAT('/upload/resume/demo/', s.username, '.docx')
+  );
 
 INSERT INTO resume_parse_result (resume_id, keyword_coverage, basic_info, work_experience, skills, work_history, ai_summary, improvement_suggestions, create_time, update_time)
 SELECT r.id, 88,
@@ -119,7 +118,11 @@ SELECT j.id, s.id, r.id,
 FROM job j
 JOIN hr h ON h.id = j.hr_id
 JOIN seeker s ON s.username IN ('demo_sk1', 'demo_sk2', 'demo_sk3', 'demo_sk4')
-JOIN resume r ON r.seeker_id = s.id
+JOIN resume r ON r.id = (
+  SELECT MAX(r2.id)
+  FROM resume r2
+  WHERE r2.seeker_id = s.id
+)
 WHERE h.username = 'demo_hr1'
   AND j.job_name = '高级前端工程师/AI产品架构'
 ON DUPLICATE KEY UPDATE
@@ -247,7 +250,11 @@ SELECT j.id, s.id, r.id,
 FROM hr h
 JOIN job j ON j.hr_id = h.id AND j.job_name = 'AI 高级前端工程师'
 JOIN seeker s ON s.username IN ('demo_sk1', 'demo_sk2', 'demo_sk3', 'demo_sk4')
-JOIN resume r ON r.seeker_id = s.id
+JOIN resume r ON r.id = (
+  SELECT MAX(r2.id)
+  FROM resume r2
+  WHERE r2.seeker_id = s.id
+)
 WHERE h.username = '123123123'
 ON DUPLICATE KEY UPDATE
   resume_id = VALUES(resume_id),

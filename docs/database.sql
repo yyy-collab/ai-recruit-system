@@ -90,9 +90,9 @@ CREATE TABLE `resume` (
                           `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
                           `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                           PRIMARY KEY (`id`),
-                          UNIQUE KEY `uk_seeker_id` (`seeker_id`),
+                          KEY `idx_resume_seeker_id` (`seeker_id`),
                           CONSTRAINT `fk_resume_seeker` FOREIGN KEY (`seeker_id`) REFERENCES `seeker` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='简历表，每个求职者最多一条';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='简历表，支持同一求职者多版本简历';
 
 -- ----------------------------
 -- 5. AI简历解析结果表 (resume_parse_result)

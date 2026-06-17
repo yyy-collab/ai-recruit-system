@@ -68,6 +68,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     private ResumeService resumeService;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result addDelivery(Delivery delivery) {
         try {
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -222,11 +223,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
             // 5. 动态排序（按前端传参设置排序规则）
             String orderSql = "delivery_time DESC"; // 默认：投递时间降序
-            if ("match_score_desc".equals(sort)) {
-                orderSql = "match_score DESC";
-            } else if ("time_desc".equals(sort)) {
-                orderSql = "delivery_time DESC";
-            }
+            orderSql = resolveHrDeliveryOrderBy(sort);
             PageHelper.orderBy(orderSql);
 
             // 6. 联表查询所需字段
@@ -382,5 +379,19 @@ public class DeliveryServiceImpl implements DeliveryService {
         }
 
         return successIds;
+    }
+
+    private String resolveHrDeliveryOrderBy(String sort) {
+        String normalized = sort == null ? "" : sort.trim();
+        return switch (normalized) {
+            case "match_score_desc" ->
+                    "CASE WHEN match_score IS NULL THEN 1 ELSE 0 END ASC, match_score DESC, delivery_time DESC, delivery_id DESC";
+            case "name_asc" ->
+                    "seeker_name ASC, delivery_time DESC, delivery_id DESC";
+            case "time_desc", "" ->
+                    "delivery_time DESC, delivery_id DESC";
+            default ->
+                    "delivery_time DESC, delivery_id DESC";
+        };
     }
 }

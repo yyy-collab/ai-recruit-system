@@ -3,6 +3,8 @@ package com.recruit.airecruitsystem.mapper;
 import com.recruit.airecruitsystem.pojo.Resume;
 import org.apache.ibatis.annotations.*;
 
+import java.util.List;
+
 @Mapper
 public interface ResumeMapper {
     @Select("SELECT * FROM resume WHERE id = #{id}")
@@ -10,6 +12,9 @@ public interface ResumeMapper {
 
     @Select("SELECT * FROM resume WHERE seeker_id = #{seekerId} ORDER BY id DESC LIMIT 1")
     Resume selectCurrentBySeekerId(Integer seekerId);
+
+    @Select("SELECT * FROM resume WHERE seeker_id = #{seekerId} ORDER BY id DESC")
+    List<Resume> selectBySeekerIdOrderByIdDesc(Integer seekerId);
 
     @Insert("INSERT INTO resume (seeker_id, file_name, file_url, is_parsed, parse_fail_reason, create_time, update_time) " +
             "VALUES (#{seekerId}, #{fileName}, #{fileUrl}, #{isParsed}, #{parseFailReason}, NOW(), NOW())")

@@ -88,12 +88,6 @@ public class ResumeServiceImpl implements ResumeService {
             return ResultCode.PARAM_ERROR;
         }
 
-        Resume currentResume = resumeMapper.selectCurrentBySeekerId(seekerId);
-        boolean replacingResume = currentResume != null;
-        if (replacingResume && deliveryMapper.countPendingBySeekerId(seekerId) > 0) {
-            return ResultCode.RESUME_UPDATE_BLOCKED;
-        }
-
         String extension = resolveExtension(file.getOriginalFilename());
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             return ResultCode.FILE_FORMAT_ERROR;
@@ -105,9 +99,7 @@ public class ResumeServiceImpl implements ResumeService {
         try {
             StoredResumeFile storedFile = storeResumeFile(seekerId, file, extension);
             String fileName = resolveOriginalFileName(file, extension);
-            return replacingResume
-                    ? replaceResume(currentResume, storedFile, fileName, extension, vo)
-                    : createResume(seekerId, storedFile, fileName, extension, vo);
+            return createResume(seekerId, storedFile, fileName, extension, vo);
         } catch (IOException e) {
             return ResultCode.PARAM_ERROR;
         }
@@ -119,8 +111,8 @@ public class ResumeServiceImpl implements ResumeService {
         if (seekerId == null) {
             return list;
         }
-        Resume resume = resumeMapper.selectCurrentBySeekerId(seekerId);
-        if (resume != null) {
+        List<Resume> resumes = resumeMapper.selectBySeekerIdOrderByIdDesc(seekerId);
+        for (Resume resume : resumes) {
             ResumeSummaryVO vo = new ResumeSummaryVO();
             copySummary(resume, vo);
             list.add(vo);
@@ -290,42 +282,6 @@ public class ResumeServiceImpl implements ResumeService {
             if (resume != null && resume.getId() != null) {
                 resumeMapper.updateParseStatus(resume.getId(), 3, trimMessage(e.getMessage()));
             }
-            return ResultCode.PARAM_ERROR;
-        }
-    }
-
-    private int replaceResume(Resume currentResume,
-                              StoredResumeFile storedFile,
-                              String fileName,
-                              String extension,
-                              ResumeSummaryVO vo) {
-        String oldFileName = currentResume.getFileName();
-        String oldFileUrl = currentResume.getFileUrl();
-        Integer oldIsParsed = currentResume.getIsParsed();
-        String oldParseFailReason = currentResume.getParseFailReason();
-
-        currentResume.setFileName(fileName);
-        currentResume.setFileUrl(storedFile.fileUrl());
-        currentResume.setIsParsed(2);
-        currentResume.setParseFailReason(null);
-
-        try {
-            // Single-resume mode: overwrite the existing row instead of creating a versioned record.
-            resumeMapper.updateFileInfo(currentResume);
-            parseAndPersist(currentResume, storedFile.path(), extension);
-            resumeMapper.updateParseStatus(currentResume.getId(), 1, null);
-
-            deleteStoredFile(oldFileUrl);
-            Resume latest = resumeMapper.selectById(currentResume.getId());
-            copySummary(latest, vo);
-            return ResultCode.SUCCESS;
-        } catch (IOException e) {
-            currentResume.setFileName(oldFileName);
-            currentResume.setFileUrl(oldFileUrl);
-            currentResume.setIsParsed(oldIsParsed);
-            currentResume.setParseFailReason(oldParseFailReason);
-            resumeMapper.updateFileInfo(currentResume);
-            deleteStoredFile(storedFile.fileUrl());
             return ResultCode.PARAM_ERROR;
         }
     }
