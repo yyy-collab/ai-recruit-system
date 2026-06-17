@@ -29,6 +29,11 @@ public interface JobMapper {
     int updateSelective(Job job);
 
     /**
+     * 投递成功后递增岗位投递数
+     */
+    int incrementDeliveryCount(@Param("id") Integer id);
+
+    /**
      * HR 端分页查询自己的岗位列表
      */
     List<HrJobListItemResponse> selectHrJobList(@Param("hrId") Integer hrId,

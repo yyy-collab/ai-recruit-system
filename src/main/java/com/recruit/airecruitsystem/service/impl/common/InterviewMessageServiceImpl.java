@@ -49,6 +49,9 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
         }
         Delivery delivery = deliveryMapper.selectById(request.getDeliveryId());
         if (delivery == null) return ResultCode.NOT_FOUND;
+        if (!Integer.valueOf(1).equals(delivery.getStatus())) {
+            return ResultCode.PARAM_ERROR;
+        }
         Job job = jobMapper.selectById(delivery.getJobId());
         if (job == null || !job.getHrId().equals(hrId)) return ResultCode.PARAM_ERROR;
 

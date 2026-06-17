@@ -11,7 +11,13 @@ import com.recruit.airecruitsystem.vo.resume.ResumeSummaryVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -34,7 +40,7 @@ public class ResumeController {
         return switch (code) {
             case ResultCode.SUCCESS -> Result.success("简历上传成功", vo);
             case ResultCode.INFO_INCOMPLETE -> Result.error(ResultCode.INFO_INCOMPLETE, "请先完善真实姓名、电话和邮箱后再上传简历");
-            case ResultCode.RESUME_EXIST -> Result.error(ResultCode.RESUME_EXIST, "已上传过简历，请先删除后再重新上传");
+            case ResultCode.RESUME_UPDATE_BLOCKED -> Result.error(ResultCode.RESUME_UPDATE_BLOCKED, "当前还有待处理投递，需等所有投递记录都被处理后才能更新简历");
             case ResultCode.FILE_FORMAT_ERROR -> Result.error(ResultCode.FILE_FORMAT_ERROR, "仅支持 DOC / DOCX 格式");
             case ResultCode.FILE_TOO_LARGE -> Result.error(ResultCode.FILE_TOO_LARGE, "文件大小不能超过 20MB");
             default -> Result.error(ResultCode.PARAM_ERROR, "简历上传失败");

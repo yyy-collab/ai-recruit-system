@@ -33,7 +33,7 @@ public class JobServiceImpl implements JobService {
 
     private static final int DEFAULT_PAGE_NUM = 1;
     private static final int DEFAULT_PAGE_SIZE = 10;
-    private static final int MAX_PAGE_SIZE = 50;
+    private static final int MAX_PAGE_SIZE = 200;
 
     private final JobMapper jobMapper;
     private final HrMapper hrMapper;
@@ -50,9 +50,11 @@ public class JobServiceImpl implements JobService {
         if (hr == null) {
             throw new BusinessException(ResultCode.NOT_FOUND, "HR信息不存在");
         }
-//        if (!StringUtils.hasText(hr.getCompanyName())) {
-//            throw new BusinessException(ResultCode.INFO_INCOMPLETE, "请先完善个人信息后再进行此操作");
-//        }
+        if (!StringUtils.hasText(hr.getCompanyName())
+                || !StringUtils.hasText(hr.getRealName())
+                || !StringUtils.hasText(hr.getPhone())) {
+            throw new BusinessException(ResultCode.INFO_INCOMPLETE, "请先完善真实姓名、电话和公司名称后再发布岗位");
+        }
 
         Job job = new Job();
         job.setHrId(hrId);
@@ -270,7 +272,7 @@ public class JobServiceImpl implements JobService {
                     "CAST(SUBSTRING_INDEX(REPLACE(UPPER(j.salary), 'K', ''), '-', -1) AS DECIMAL(10,2)) DESC, j.create_time DESC, j.id DESC";
             case "time_desc", "时间降序" -> "j.create_time DESC, j.id DESC";
             case "match_score_desc", "match_desc", "匹配度降序" ->
-                    "amr.match_score DESC, j.create_time DESC, j.id DESC";
+                    "match_score DESC, j.create_time DESC, j.id DESC";
             default -> throw new BusinessException(ResultCode.PARAM_ERROR, "排序参数不合法");
         };
     }

@@ -29,4 +29,5 @@ public class ResultCode {
     public static final int EMAIL_NOT_REGISTERED = 10022;     // 邮箱未注册或验证码错误/过期
     public static final int NEED_RELOGIN = 10023;   // 密码修改成功，需要重新登录
     public static final int HR_HAS_ONLINE_JOBS = 10024; // HR名下还有上线岗位，无法注销
+    public static final int RESUME_UPDATE_BLOCKED = 10025; // 瀛樺湪寰呭鐞嗘姇閫掞紝鏆備笉鍏佽鏇存柊绠€鍘?
 }

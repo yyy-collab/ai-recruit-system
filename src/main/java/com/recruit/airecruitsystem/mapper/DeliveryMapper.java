@@ -52,12 +52,14 @@ public interface DeliveryMapper {
     @Select("SELECT * FROM delivery WHERE seeker_id = #{seekerId} ORDER BY delivery_time DESC")
     List<Delivery> selectBySeekerId(Integer seekerId);
 
+    @Select("SELECT COUNT(*) FROM delivery WHERE seeker_id = #{seekerId} AND status = 0")
+    int countPendingBySeekerId(Integer seekerId);
+
     /**
      * 查询某个岗位下的所有投递记录（HR查看）
      */
     @Select("SELECT * FROM delivery WHERE job_id = #{jobId} ORDER BY delivery_time DESC")
     List<Delivery> selectByJobId(Integer jobId);
-
 
     @Select("SELECT * FROM delivery WHERE seeker_id = #{seekerId} AND status = #{status}")
     List<Delivery> selectBySeekerIdAndStatus(
@@ -76,8 +78,8 @@ public interface DeliveryMapper {
             + "h.company_name        AS company_name, "
             + "j.salary              AS salary, "
             + "r.file_name           AS resume_file_name, "
-            + "am.match_score        AS match_score, "
-            + "am.match_level        AS match_level, "
+            + "(SELECT am.match_score FROM ai_match_result am WHERE am.delivery_id = d.id ORDER BY am.update_time DESC, am.id DESC LIMIT 1) AS match_score, "
+            + "(SELECT am.match_level FROM ai_match_result am WHERE am.delivery_id = d.id ORDER BY am.update_time DESC, am.id DESC LIMIT 1) AS match_level, "
             + "d.status              AS status, "
             + "d.delivery_time       AS delivery_time, "
             + "d.update_time         AS update_time "
@@ -85,7 +87,6 @@ public interface DeliveryMapper {
             + "LEFT JOIN job j ON d.job_id = j.id "
             + "LEFT JOIN hr h ON j.hr_id = h.id "
             + "LEFT JOIN resume r ON d.resume_id = r.id "
-            + "LEFT JOIN ai_match_result am ON d.id = am.delivery_id "
             + "WHERE d.seeker_id = #{seekerId} "
             + "<if test='status != null'>AND d.status = #{status}</if> "
             + "ORDER BY d.delivery_time DESC"
@@ -104,14 +105,13 @@ public interface DeliveryMapper {
             + "s.real_name AS seeker_name, "
             + "d.resume_id, "
             + "r.file_name AS resume_file_name, "
-            + "am.match_score, "
-            + "am.match_level, "
+            + "(SELECT am.match_score FROM ai_match_result am WHERE am.delivery_id = d.id ORDER BY am.update_time DESC, am.id DESC LIMIT 1) AS match_score, "
+            + "(SELECT am.match_level FROM ai_match_result am WHERE am.delivery_id = d.id ORDER BY am.update_time DESC, am.id DESC LIMIT 1) AS match_level, "
             + "d.status, "
             + "d.delivery_time "
             + "FROM delivery d "
             + "LEFT JOIN seeker s ON d.seeker_id = s.id "
             + "LEFT JOIN resume r ON d.resume_id = r.id "
-            + "LEFT JOIN ai_match_result am ON d.id = am.delivery_id "
             + "WHERE d.job_id = #{jobId} "
             + "<if test='status != null'>AND d.status = #{status}</if>"
             + "</script>")
@@ -139,10 +139,9 @@ SELECT
     s.alma_mater,
     r.id AS resume_id,
     r.file_url AS resume_file_url,
-    rp.basic_info,
+    rp.keyword_coverage,
     rp.work_experience,
     rp.skills,
-    rp.work_history,
     am.match_score,
     am.match_level,
     am.core_advantages,

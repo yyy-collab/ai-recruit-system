@@ -99,15 +99,31 @@
     <select id="selectSeekerJobList" resultType="com.recruit.airecruitsystem.dto.job.SeekerJobListItemResponse">
         SELECT j.id,
                j.job_name,
+               j.job_desc,
                j.salary,
                j.work_address,
+               j.work_experience,
+               j.keywords,
                h.company_name,
+               j.status,
                j.create_time,
-               amr.match_score
+               (
+                   SELECT amr.match_score
+                   FROM delivery d
+                            LEFT JOIN ai_match_result amr ON amr.delivery_id = d.id
+                   WHERE d.job_id = j.id
+                     AND d.seeker_id = #{seekerId}
+                   ORDER BY d.delivery_time DESC, amr.update_time DESC, amr.id DESC, d.id DESC
+                   LIMIT 1
+               ) AS match_score,
+               EXISTS(
+                   SELECT 1
+                   FROM delivery d
+                   WHERE d.job_id = j.id
+                     AND d.seeker_id = #{seekerId}
+               ) AS is_delivered
         FROM job j
                  INNER JOIN hr h ON j.hr_id = h.id
-                 LEFT JOIN delivery d ON d.job_id = j.id AND d.seeker_id = #{seekerId}
-                 LEFT JOIN ai_match_result amr ON amr.delivery_id = d.id
         WHERE j.status = 1
         <if test="jobName != null and jobName != ''">
             AND j.job_name LIKE CONCAT('%', #{jobName}, '%')

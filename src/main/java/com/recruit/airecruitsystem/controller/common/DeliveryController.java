@@ -2,10 +2,7 @@ package com.recruit.airecruitsystem.controller.common;
 
 import com.recruit.airecruitsystem.dto.hr.BatchDeliveryStatusUpdateDTO;
 import com.recruit.airecruitsystem.dto.hr.DeliveryStatusUpdateDTO;
-import com.recruit.airecruitsystem.mapper.ResumeMapper;
 import com.recruit.airecruitsystem.pojo.Delivery;
-import com.recruit.airecruitsystem.pojo.Resume;
-import com.recruit.airecruitsystem.utils.JwtUtil;
 import com.recruit.airecruitsystem.result.Result;
 import com.recruit.airecruitsystem.service.common.DeliveryService;
 import jakarta.validation.Valid;
@@ -20,10 +17,6 @@ public class DeliveryController {
 
     @Autowired
     private DeliveryService deliveryService;
-    @Autowired
-    private ResumeMapper resumeMapper;
-    @Autowired
-    private JwtUtil jwtUtil;
 
     // ==========================
     // 【求职者接口】
@@ -33,26 +26,45 @@ public class DeliveryController {
      * 1. 投递岗位（含匹配引擎）
      */
     @PostMapping("/seeker/delivery/add")
-    public Result addDelivery(@RequestBody Map<String,Integer> req,
-                              @RequestHeader("Authorization") String token) {
-        // 剔除Bearer 前缀
-        if(token.startsWith("Bearer ")){
-            token = token.substring(7);
+    public Result addDelivery(@RequestBody Object requestBody) {
+        Integer jobId = extractJobId(requestBody);
+        if (jobId == null) {
+            return Result.error(10002, "岗位ID不能为空");
         }
-        // 手动从请求头token解析用户ID
-        Integer seekerId = jwtUtil.getUserId(token);
+
         Delivery delivery = new Delivery();
-        delivery.setJobId(req.get("job_id"));
-        delivery.setSeekerId(seekerId);
-
-        // 根据用户查简历自动填充resume_id
-        Resume resume = resumeMapper.selectBySeekerId(seekerId);
-        if(resume == null){
-            return Result.error(10006, "未上传简历，无法投递");
-        }
-        delivery.setResumeId(resume.getId());
-
+        delivery.setJobId(jobId);
         return deliveryService.addDelivery(delivery);
+    }
+
+    private Integer extractJobId(Object requestBody) {
+        if (requestBody == null) {
+            return null;
+        }
+        if (requestBody instanceof Number) {
+            return ((Number) requestBody).intValue();
+        }
+        if (requestBody instanceof String) {
+            try {
+                return Integer.valueOf((String) requestBody);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        if (requestBody instanceof Map) {
+            Object value = ((Map<?, ?>) requestBody).get("jobId");
+            if (value instanceof Number) {
+                return ((Number) value).intValue();
+            }
+            if (value instanceof String) {
+                try {
+                    return Integer.valueOf((String) value);
+                } catch (NumberFormatException ignored) {
+                    return null;
+                }
+            }
+        }
+        return null;
     }
 
     /**

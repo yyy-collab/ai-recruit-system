@@ -7,6 +7,8 @@ import com.recruit.airecruitsystem.mapper.DeliveryMapper;
 import com.recruit.airecruitsystem.mapper.JobMapper;
 import com.recruit.airecruitsystem.mapper.ResumeMapper;
 import com.recruit.airecruitsystem.mapper.SeekerMapper;
+import com.recruit.airecruitsystem.mapper.AiMatchResultMapper;
+import com.recruit.airecruitsystem.pojo.AiMatchResult;
 import com.recruit.airecruitsystem.pojo.Delivery;
 import com.recruit.airecruitsystem.pojo.Job;
 import com.recruit.airecruitsystem.pojo.Resume;
@@ -16,7 +18,9 @@ import com.recruit.airecruitsystem.service.ai.HanLPService;
 import com.recruit.airecruitsystem.service.ai.KeywordExtractService;
 import com.recruit.airecruitsystem.service.ai.MatchCalculateService;
 import com.recruit.airecruitsystem.service.common.DeliveryService;
+import com.recruit.airecruitsystem.service.resume.ResumeService;
 import com.recruit.airecruitsystem.utils.JwtUtil;
+import com.recruit.airecruitsystem.vo.hr.HrResumeDetailVO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -47,6 +51,9 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Autowired
     private ResumeMapper resumeMapper;
 
+    @Autowired
+    private AiMatchResultMapper aiMatchResultMapper;
+
     // ====================== 注入AI接口 ======================
     @Autowired
     private HanLPService hanLPService;
@@ -57,15 +64,35 @@ public class DeliveryServiceImpl implements DeliveryService {
     @Autowired
     private MatchCalculateService matchCalculateService;
 
+    @Autowired
+    private ResumeService resumeService;
+
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Result addDelivery(Delivery delivery) {
         try {
-            // 1. 参数校验
-            if (delivery.getSeekerId() == null || delivery.getJobId() == null) {
-                return Result.error(10002, "求职者ID或岗位ID不能为空");
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return Result.error(10007, "用户未登录");
             }
+            HttpServletRequest request = attrs.getRequest();
+            Integer seekerId = jwtUtil.getUserIdFromRequest(request);
+            if (seekerId == null) {
+                return Result.error(10007, "用户未登录");
+            }
+
+            // 1. 参数校验
+            if (delivery.getJobId() == null) {
+                return Result.error(10002, "岗位ID不能为空");
+            }
+            delivery.setSeekerId(seekerId);
+
             if (delivery.getResumeId() == null) {
-                return Result.error(10003, "简历ID不能为空");
+                Resume resume = resumeMapper.selectCurrentBySeekerId(seekerId);
+                if (resume == null) {
+                    return Result.error(10018, "请先上传简历后再投递");
+                }
+                delivery.setResumeId(resume.getId());
             }
 
             // 2. 防重复投递
@@ -117,6 +144,12 @@ public class DeliveryServiceImpl implements DeliveryService {
             // 5. 插入投递记录
             delivery.setStatus(0);
             deliveryMapper.insert(delivery);
+            jobMapper.incrementDeliveryCount(delivery.getJobId());
+            AiMatchResult matchResult = new AiMatchResult();
+            matchResult.setDeliveryId(delivery.getId());
+            matchResult.setMatchScore(scoreDouble);
+            matchResult.setMatchLevel(level);
+            aiMatchResultMapper.insert(matchResult);
 
             // 6. 返回结果
             Map<String, Object> map = new HashMap<>();
@@ -190,11 +223,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
             // 5. 动态排序（按前端传参设置排序规则）
             String orderSql = "delivery_time DESC"; // 默认：投递时间降序
-            if ("match_score_desc".equals(sort)) {
-                orderSql = "match_score DESC";
-            } else if ("time_desc".equals(sort)) {
-                orderSql = "delivery_time DESC";
-            }
+            orderSql = resolveHrDeliveryOrderBy(sort);
             PageHelper.orderBy(orderSql);
 
             // 6. 联表查询所需字段
@@ -245,6 +274,11 @@ public class DeliveryServiceImpl implements DeliveryService {
                 return Result.error(10015, "无权查看该投递详情");
             }
 
+            HrResumeDetailVO hrDetail = resumeService.getHrDeliveryDetail(hrId, deliveryId);
+            if (hrDetail == null) {
+                return Result.error(10005, "投递记录不存在");
+            }
+
             // 5. 按需求组装响应结构
             Map<String, Object> data = new HashMap<>();
             data.put("delivery_id", rawData.get("delivery_id"));
@@ -256,25 +290,27 @@ public class DeliveryServiceImpl implements DeliveryService {
 
             // 组装求职者信息
             Map<String, Object> seekerInfo = new HashMap<>();
-            seekerInfo.put("id", rawData.get("seeker_id"));
-            seekerInfo.put("real_name", rawData.get("real_name"));
-            seekerInfo.put("phone", rawData.get("phone"));
-            seekerInfo.put("email", rawData.get("email"));
-            seekerInfo.put("age", rawData.get("age"));
-            seekerInfo.put("edu_back", rawData.get("edu_back"));
-            seekerInfo.put("alma_mater", rawData.get("alma_mater"));
+            seekerInfo.put("id", hrDetail.getSeekerInfo().getId());
+            seekerInfo.put("real_name", hrDetail.getSeekerInfo().getRealName());
+            seekerInfo.put("phone", hrDetail.getSeekerInfo().getPhone());
+            seekerInfo.put("email", hrDetail.getSeekerInfo().getEmail());
+            seekerInfo.put("age", hrDetail.getSeekerInfo().getAge());
+            seekerInfo.put("edu_back", hrDetail.getSeekerInfo().getEduBack());
+            seekerInfo.put("alma_mater", hrDetail.getSeekerInfo().getAlmaMater());
             data.put("seeker_info", seekerInfo);
 
             // 组装简历信息
             Map<String, Object> resumeInfo = new HashMap<>();
-            resumeInfo.put("resume_id", rawData.get("resume_id"));
-            resumeInfo.put("resume_file_url", rawData.get("resume_file_url"));
+            resumeInfo.put("resume_id", hrDetail.getResumeInfo().getResumeId());
+            resumeInfo.put("resume_file_url", hrDetail.getResumeInfo().getResumeFileUrl());
+            resumeInfo.put("resume_file_name", hrDetail.getResumeInfo().getResumeFileName());
+            resumeInfo.put("preview_text", hrDetail.getResumeInfo().getPreviewText());
 
             Map<String, Object> parsedData = new HashMap<>();
             parsedData.put("basic_info", rawData.get("basic_info"));
-            parsedData.put("work_experience", rawData.get("work_experience"));
-            parsedData.put("skills", rawData.get("skills"));
-            parsedData.put("work_history", rawData.get("work_history"));
+            parsedData.put("work_experience", hrDetail.getResumeInfo().getWorkExperience());
+            parsedData.put("skills", hrDetail.getResumeInfo().getSkills());
+            parsedData.put("work_history", hrDetail.getResumeInfo().getWorkHistory());
             resumeInfo.put("parsed_data", parsedData);
             data.put("resume_info", resumeInfo);
 
@@ -343,5 +379,19 @@ public class DeliveryServiceImpl implements DeliveryService {
         }
 
         return successIds;
+    }
+
+    private String resolveHrDeliveryOrderBy(String sort) {
+        String normalized = sort == null ? "" : sort.trim();
+        return switch (normalized) {
+            case "match_score_desc" ->
+                    "CASE WHEN match_score IS NULL THEN 1 ELSE 0 END ASC, match_score DESC, delivery_time DESC, delivery_id DESC";
+            case "name_asc" ->
+                    "seeker_name ASC, delivery_time DESC, delivery_id DESC";
+            case "time_desc", "" ->
+                    "delivery_time DESC, delivery_id DESC";
+            default ->
+                    "delivery_time DESC, delivery_id DESC";
+        };
     }
 }
