@@ -50,8 +50,10 @@ public class JobController {
             @RequestParam(value = "pageNum", required = false) Integer pageNum,
             @RequestParam(value = "pageSize", required = false) Integer pageSize,
             @RequestParam(value = "status", required = false) Integer status,
-            @RequestParam(value = "job_name", required = false) String jobName) {
-        return Result.success(jobService.getMyJobs(pageNum, pageSize, status, jobName));
+            @RequestParam(value = "job_name", required = false) String jobName,
+            @RequestParam(value = "salary", required = false) String salary,
+            @RequestParam(value = "work_address", required = false) String workAddress) {
+        return Result.success(jobService.getMyJobs(pageNum, pageSize, status, jobName, salary, workAddress));
     }
 
     @DeleteMapping("/delete")

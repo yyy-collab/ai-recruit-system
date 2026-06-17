@@ -67,33 +67,49 @@
         WHERE id = #{id}
     </update>
 
+    <update id="incrementDeliveryCount">
+        UPDATE job
+        SET delivery_count = COALESCE(delivery_count, 0) + 1
+        WHERE id = #{id}
+    </update>
+
     <delete id="deleteById">
         DELETE FROM job
         WHERE id = #{id}
     </delete>
 
     <select id="selectHrJobList" resultType="com.recruit.airecruitsystem.dto.job.HrJobListItemResponse">
-        SELECT id,
-               job_name,
-               job_desc,
-               requirement,
-               keywords,
-               salary,
-               work_address,
-               work_experience,
-               status,
-               create_time,
-               update_time,
-               delivery_count
-        FROM job
-        WHERE hr_id = #{hrId}
+        SELECT j.id,
+               j.job_name,
+               j.job_desc,
+               j.requirement,
+               j.keywords,
+               j.salary,
+               j.work_address,
+               j.work_experience,
+               j.status,
+               j.create_time,
+               j.update_time,
+               (
+                   SELECT COUNT(1)
+                   FROM delivery d
+                   WHERE d.job_id = j.id
+               ) AS delivery_count
+        FROM job j
+        WHERE j.hr_id = #{hrId}
         <if test="status != null">
             AND status = #{status}
         </if>
         <if test="jobName != null and jobName != ''">
-            AND job_name LIKE CONCAT('%', #{jobName}, '%')
+            AND j.job_name LIKE CONCAT('%', #{jobName}, '%')
         </if>
-        ORDER BY create_time DESC, id DESC
+        <if test="salary != null and salary != ''">
+            AND j.salary LIKE CONCAT('%', #{salary}, '%')
+        </if>
+        <if test="workAddress != null and workAddress != ''">
+            AND j.work_address LIKE CONCAT('%', #{workAddress}, '%')
+        </if>
+        ORDER BY j.create_time DESC, j.id DESC
     </select>
 
     <select id="selectSeekerJobList" resultType="com.recruit.airecruitsystem.dto.job.SeekerJobListItemResponse">
@@ -127,6 +143,12 @@
         WHERE j.status = 1
         <if test="jobName != null and jobName != ''">
             AND j.job_name LIKE CONCAT('%', #{jobName}, '%')
+        </if>
+        <if test="salary != null and salary != ''">
+            AND j.salary LIKE CONCAT('%', #{salary}, '%')
+        </if>
+        <if test="workAddress != null and workAddress != ''">
+            AND j.work_address LIKE CONCAT('%', #{workAddress}, '%')
         </if>
     </select>
 
