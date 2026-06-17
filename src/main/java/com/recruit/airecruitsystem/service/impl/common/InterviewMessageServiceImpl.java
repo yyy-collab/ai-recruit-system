@@ -82,8 +82,10 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
         List<InterviewMessage> messages = interviewMessageMapper.selectByHrId(hrId, status);
         // 转换为 VO
         List<HrMessageListItemVO> voList = messages.stream().map(msg -> {
-            Seeker seeker = seekerMapper.findById(msg.getSeekerId()); // 改为 selectById
+            Seeker seeker = seekerMapper.findById(msg.getSeekerId());
             String seekerName = seeker != null ? seeker.getRealName() : "";
+            // 新增头像赋值
+            String seekerAvatar = seeker != null ? seeker.getAvatarUrl() : null;
             String jobName = "";
             Delivery delivery = deliveryMapper.selectById(msg.getDeliveryId());
             if (delivery != null) {
@@ -93,6 +95,8 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
             HrMessageListItemVO vo = new HrMessageListItemVO();
             vo.setMessageId(msg.getId());
             vo.setSeekerName(seekerName);
+            // 头像赋值
+            vo.setSeekerAvatar(seekerAvatar);
             vo.setJobName(jobName);
             vo.setStatus(msg.getStatus());
             vo.setStatusText(MessageStatusEnum.fromCode(msg.getStatus()).getDesc());
@@ -103,7 +107,6 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
             vo.setRejectReason(msg.getRejectReason());
             return vo;
         }).collect(Collectors.toList());
-
         // 获取总记录数
         long total = 0;
         if (messages instanceof com.github.pagehelper.Page) {
@@ -169,6 +172,8 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
             Hr hr = hrMapper.selectById(msg.getHrId());
             String hrName = hr != null ? hr.getRealName() : "";
             String companyName = hr != null ? hr.getCompanyName() : "";
+            // 新增头像赋值
+            String hrAvatar = hr != null ? hr.getAvatarUrl() : null;
             String jobName = "";
             Delivery delivery = deliveryMapper.selectById(msg.getDeliveryId());
             if (delivery != null) {
@@ -178,6 +183,8 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
             SeekerMessageListItemVO vo = new SeekerMessageListItemVO();
             vo.setMessageId(msg.getId());
             vo.setHrName(hrName);
+            // 头像赋值
+            vo.setHrAvatar(hrAvatar);
             vo.setCompanyName(companyName);
             vo.setJobName(jobName);
             vo.setStatus(msg.getStatus());
@@ -189,7 +196,6 @@ public class InterviewMessageServiceImpl implements InterviewMessageService {
             vo.setRejectReason(msg.getRejectReason());
             return vo;
         }).collect(Collectors.toList());
-
         long total = 0;
         if (messages instanceof com.github.pagehelper.Page) {
             total = ((com.github.pagehelper.Page<?>) messages).getTotal();

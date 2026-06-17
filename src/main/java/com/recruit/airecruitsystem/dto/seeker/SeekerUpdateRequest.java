@@ -13,7 +13,6 @@ public class SeekerUpdateRequest {
     private String realName;
 
     @JsonProperty("avatar_url")
-    @URL(message = "头像URL格式不正确")
     private String avatarUrl;
 
     @JsonProperty("phone")
