@@ -10,7 +10,7 @@ public interface InterviewMessageMapper {
     @Insert("INSERT INTO interview_message (delivery_id, hr_id, seeker_id, interview_date, interview_time, " +
             "interview_type, interview_round, interview_address, contact_name, contact_phone, remark, status) " +
             "VALUES (#{deliveryId}, #{hrId}, #{seekerId}, #{interviewDate}, #{interviewTime}, #{interviewType}, " +
-            "#{interviewRound}, #{interviewAddress}, #{contactName}, #{contactPhone}, 0)")
+            "#{interviewRound}, #{interviewAddress}, #{contactName}, #{contactPhone}, #{remark}, #{status})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(InterviewMessage message);
 
