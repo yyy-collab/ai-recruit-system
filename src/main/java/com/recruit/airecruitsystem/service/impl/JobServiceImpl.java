@@ -114,29 +114,33 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
-    public PageResponse<HrJobListItemResponse> getMyJobs(Integer pageNum, Integer pageSize, Integer status, String jobName) {
+    public PageResponse<HrJobListItemResponse> getMyJobs(Integer pageNum, Integer pageSize, Integer status, String jobName, String salary, String workAddress) {
         Integer hrId = requireCurrentUserId();
         int validPageNum = normalizePageNum(pageNum);
         int validPageSize = normalizePageSize(pageSize);
         Integer validStatus = normalizeStatus(status);
         String validJobName = normalizeOptionalText(jobName);
+        String validSalary = normalizeOptionalText(salary);
+        String validWorkAddress = normalizeOptionalText(workAddress);
 
         PageHelper.startPage(validPageNum, validPageSize);
-        List<HrJobListItemResponse> jobs = jobMapper.selectHrJobList(hrId, validStatus, validJobName);
+        List<HrJobListItemResponse> jobs = jobMapper.selectHrJobList(hrId, validStatus, validJobName, validSalary, validWorkAddress);
         return PageResponse.of(new PageInfo<>(jobs));
     }
 
     @Override
-    public PageResponse<SeekerJobListItemResponse> getOnlineJobs(Integer pageNum, Integer pageSize, String jobName, String sort) {
+    public PageResponse<SeekerJobListItemResponse> getOnlineJobs(Integer pageNum, Integer pageSize, String jobName, String salary, String workAddress, String sort) {
         Integer seekerId = requireCurrentUserId();
         int validPageNum = normalizePageNum(pageNum);
         int validPageSize = normalizePageSize(pageSize);
         String validJobName = normalizeOptionalText(jobName);
+        String validSalary = normalizeOptionalText(salary);
+        String validWorkAddress = normalizeOptionalText(workAddress);
 
         Page page = PageHelper.startPage(validPageNum, validPageSize);
         page.setUnsafeOrderBy(resolveSeekerJobOrderBy(sort)); // ✅ 正确写法
 
-        List<SeekerJobListItemResponse> jobs = jobMapper.selectSeekerJobList(seekerId, validJobName);
+        List<SeekerJobListItemResponse> jobs = jobMapper.selectSeekerJobList(seekerId, validJobName, validSalary, validWorkAddress);
         return PageResponse.of(new PageInfo<>(jobs));
     }
     @Override

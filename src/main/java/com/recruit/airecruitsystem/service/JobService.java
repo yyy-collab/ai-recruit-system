@@ -17,9 +17,9 @@ public interface JobService {
 
     void changeStatus(JobStatusUpdateRequest request);
 
-    PageResponse<HrJobListItemResponse> getMyJobs(Integer pageNum, Integer pageSize, Integer status, String jobName);
+    PageResponse<HrJobListItemResponse> getMyJobs(Integer pageNum, Integer pageSize, Integer status, String jobName, String salary, String workAddress);
 
-    PageResponse<SeekerJobListItemResponse> getOnlineJobs(Integer pageNum, Integer pageSize, String jobName, String sort);
+    PageResponse<SeekerJobListItemResponse> getOnlineJobs(Integer pageNum, Integer pageSize, String jobName, String salary, String workAddress, String sort);
 
     SeekerJobDetailResponse getOnlineJobDetail(Integer jobId);
 

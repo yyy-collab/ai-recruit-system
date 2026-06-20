@@ -38,13 +38,17 @@ public interface JobMapper {
      */
     List<HrJobListItemResponse> selectHrJobList(@Param("hrId") Integer hrId,
                                                 @Param("status") Integer status,
-                                                @Param("jobName") String jobName);
+                                                @Param("jobName") String jobName,
+                                                @Param("salary") String salary,
+                                                @Param("workAddress") String workAddress);
 
     /**
      * 求职者端分页查询在线岗位列表
      */
     List<SeekerJobListItemResponse> selectSeekerJobList(@Param("seekerId") Integer seekerId,
-                                                        @Param("jobName") String jobName);
+                                                        @Param("jobName") String jobName,
+                                                        @Param("salary") String salary,
+                                                        @Param("workAddress") String workAddress);
 
     /**
      * 求职者端查询岗位详情

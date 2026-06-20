@@ -25,8 +25,10 @@ public class JobController {
             @RequestParam(value = "pageNum", required = false) Integer pageNum,
             @RequestParam(value = "pageSize", required = false) Integer pageSize,
             @RequestParam(value = "job_name", required = false) String jobName,
+            @RequestParam(value = "salary", required = false) String salary,
+            @RequestParam(value = "work_address", required = false) String workAddress,
             @RequestParam(value = "sort", required = false) String sort) {
-        return Result.success(jobService.getOnlineJobs(pageNum, pageSize, jobName, sort));
+        return Result.success(jobService.getOnlineJobs(pageNum, pageSize, jobName, salary, workAddress, sort));
     }
 
     @GetMapping("/detail")
