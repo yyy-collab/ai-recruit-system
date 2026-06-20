@@ -136,7 +136,7 @@ public class DeliveryServiceImpl implements DeliveryService {
             hanLPService.segment(jobText, true);
 
             // 直接计算匹配分数
-            double scoreDouble = matchCalculateService.calculateMatch(jobText, resumeText);
+            double scoreDouble = matchCalculateService.calculateMatch(jobText, resumeText,job.getKeywords());
             BigDecimal score = new BigDecimal(scoreDouble);
             String level = matchCalculateService.getMatchLevel(scoreDouble);
             // ============================================================

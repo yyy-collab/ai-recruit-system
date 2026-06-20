@@ -177,7 +177,7 @@ public class AiController {
         System.out.println("==================");
 
         // 调用匹配服务计算分数
-        double score = matchCalculateService.calculateMatch(jobText, resumeText);
+        double score = matchCalculateService.calculateMatch(jobText, resumeText, job.getKeywords());
         String level = matchCalculateService.getMatchLevel(score);
 
         Map<String, Object> data = new HashMap<>();
@@ -265,10 +265,10 @@ public class AiController {
         }
 
         // 清除缓存（避免使用旧的匹配分数）
-        matchCalculateService.clearCache(jobText, resumeText);
+        matchCalculateService.clearCache(jobText, resumeText,job.getKeywords());
 
         // 调用匹配服务重新计算
-        double newScore = matchCalculateService.calculateMatch(jobText, resumeText);
+        double newScore = matchCalculateService.calculateMatch(jobText, resumeText, job.getKeywords());
         String newLevel = matchCalculateService.getMatchLevel(newScore);
 
         // 更新或插入 ai_match_result 表
