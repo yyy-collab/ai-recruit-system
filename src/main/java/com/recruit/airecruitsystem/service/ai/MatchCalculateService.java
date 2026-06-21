@@ -19,26 +19,25 @@ public class MatchCalculateService {
     @Autowired
     private KeywordExtractService keywordExtractService;
 
-    // 缓存（使用项目已有的 SimpleCache，设置1小时过期，最大1000条）
-    private static final int CACHE_MAX_SIZE = 1000;
+    // 缓存匹配结果，1小时过期
     private SimpleCache<String, Double> matchCache = new SimpleCache<>(3600);
 
-    // 是否启用词性过滤（名词/动词），开启可提升关键词质量
-    private static final boolean ENABLE_POS_FILTER = true;
+    // 是否启用词性过滤（关闭，保留所有有效词）
+    private static final boolean ENABLE_POS_FILTER = false;
 
-    // 文本转 TF-IDF 向量（统一停用词，可选词性过滤）
+    // ==================== 文本向量化 ====================
     private Map<String, Double> textToVector(String text) {
         List<Term> termList = HanLP.segment(text);
         List<String> words = new ArrayList<>();
         for (Term term : termList) {
             String word = term.word;
-            String nature = term.nature.toString();
             // 过滤停用词和单字符
             if (StopWordsLoader.isStopWord(word) || word.length() <= 1) {
                 continue;
             }
-            // 可选词性过滤
+            // 可选词性过滤（默认关闭）
             if (ENABLE_POS_FILTER) {
+                String nature = term.nature.toString();
                 if (!(nature.startsWith("n") || nature.startsWith("v"))) {
                     continue;
                 }
@@ -57,7 +56,7 @@ public class MatchCalculateService {
         }
         int maxTf = tfMap.values().stream().max(Integer::compare).orElse(1);
 
-        // 计算 TF-IDF 向量
+        // 计算TF-IDF向量
         Map<String, Double> vector = new HashMap<>();
         for (Map.Entry<String, Integer> entry : tfMap.entrySet()) {
             String word = entry.getKey();
@@ -68,7 +67,7 @@ public class MatchCalculateService {
         return vector;
     }
 
-    // 余弦相似度（返回 0~1）
+    // ==================== 余弦相似度 ====================
     private double cosineSimilarity(Map<String, Double> vecA, Map<String, Double> vecB) {
         Set<String> allKeys = new HashSet<>();
         allKeys.addAll(vecA.keySet());
@@ -88,23 +87,21 @@ public class MatchCalculateService {
         return dot / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 
-    /**
-     * 加分逻辑（借鉴优质代码，区分软硬技能，不限制匹配数量）
-     */
-    private int getExtraScore(String jobText, String resumeText, String jobKeywordStr) {
+    // ==================== 加分逻辑（含自动领域匹配） ====================
+    private int getExtraScore(String jobText, String resumeText, String jobKeywordStr, double baseSimilar) {
         if (jobKeywordStr == null || jobKeywordStr.isBlank()) {
             return 0;
         }
 
-        // 软技能集合（可根据业务扩展）
+        // 软技能集合
         Set<String> softSkills = new HashSet<>(Arrays.asList(
                 "沟通", "协调", "责任心", "抗压", "团队协作", "学习能力"
         ));
 
-        // 解析岗位关键词（逗号、分号分隔）
+        // 标准化岗位关键词（去除空格、转小写）
         Set<String> jobSkills = new HashSet<>();
         for (String s : jobKeywordStr.split("[,，;；]")) {
-            String trim = s.trim().toLowerCase();
+            String trim = s.trim().toLowerCase().replaceAll("\\s+", "");
             if (trim.length() >= 2) {
                 jobSkills.add(trim);
             }
@@ -113,14 +110,13 @@ public class MatchCalculateService {
             return 0;
         }
 
-        String resumeLower = resumeText.toLowerCase();
+        // 标准化简历文本
+        String resumeLower = resumeText.toLowerCase().replaceAll("\\s+", "");
         int extra = 0;
-        int matchCount = 0;
 
-        // 遍历所有岗位技能，匹配加分（软技能+1，硬技能+4）
+        // 技能匹配加分
         for (String skill : jobSkills) {
             if (resumeLower.contains(skill)) {
-                matchCount++;
                 if (softSkills.contains(skill)) {
                     extra += 1;
                 } else {
@@ -129,41 +125,55 @@ public class MatchCalculateService {
             }
         }
 
-        // 学历加分（各+3）
-        boolean jobNeedEdu = jobText.contains("本科") || jobText.contains("大专") || jobText.contains("硕士");
-        boolean resumeHasEdu = resumeText.contains("本科") || resumeText.contains("大专") || resumeText.contains("硕士");
-        if (jobNeedEdu && resumeHasEdu) {
-            extra += 3;
+        // 学历匹配加分
+        if (containsAny(jobText, "本科", "大专", "硕士") && containsAny(resumeText, "本科", "大专", "硕士")) {
+            extra += 5;
         }
 
-        // 工作年限加分（3-5年区间匹配）
-        boolean jobNeed3To5 = jobText.contains("3-5年") || jobText.contains("3年以上");
-        boolean resumeHas4Exp = resumeText.contains("4.5年") || resumeText.contains("4年") || resumeText.contains("5年");
-        if (jobNeed3To5 && resumeHas4Exp) {
-            extra += 3;
+        // 工作年限匹配加分
+        if (containsAny(jobText, "3-5年", "3年以上") && containsAny(resumeText, "4.5年", "4年", "5年", "3年")) {
+            extra += 5;
         }
 
-        // 加分上限 20（与优质代码一致）
-        return Math.min(extra, 20);
+        // ===== 自动领域匹配加分（基于向量相似度，无需预定义关键词） =====
+        if (baseSimilar > 0.15) {
+            extra += 6;
+            System.out.println("自动领域匹配加分 +6（向量相似度：" + String.format("%.4f", baseSimilar) + "）");
+        }
+
+        return Math.min(extra, 35);
     }
 
-    /**
-     * 跨赛道折损：基于 Top5 核心词，排除软技能和通用词，重合数 < 2 时降权
-     */
-    private double applyCrossDomainPenalty(double total, String jobText, String resumeText) {
+    // ==================== 跨赛道折损（基于向量相似度智能判断） ====================
+    private double applyCrossDomainPenalty(double total, String jobText, String resumeText, double baseSimilar) {
+        // 如果向量相似度足够高，视为同领域，不折损
+        if (baseSimilar > 0.15) {
+            System.out.println("向量相似度充足，不触发跨赛道折损");
+            return total;
+        }
+
+        // 否则执行原有折损逻辑（基于Top5关键词重合数）
         List<String> jobTopWords = keywordExtractService.extractKeywords(jobText, 5);
         List<String> resumeTopWords = keywordExtractService.extractKeywords(resumeText, 5);
-        Set<String> jobWordSet = new HashSet<>(jobTopWords);
 
-        // 需排除的通用词/软技能
+        Set<String> jobSet = new HashSet<>();
+        for (String w : jobTopWords) {
+            jobSet.add(w.toLowerCase().replaceAll("\\s+", ""));
+        }
+        Set<String> resumeSet = new HashSet<>();
+        for (String w : resumeTopWords) {
+            resumeSet.add(w.toLowerCase().replaceAll("\\s+", ""));
+        }
+
+        // 排除通用词/软技能
         Set<String> filterSet = new HashSet<>(Arrays.asList(
                 "沟通", "协调", "责任心", "抗压", "团队协作", "学习能力",
                 "优化", "页面", "功能", "bug", "开发", "系统", "项目", "需求"
         ));
 
         int sameCoreWordCount = 0;
-        for (String rWord : resumeTopWords) {
-            if (!filterSet.contains(rWord) && jobWordSet.contains(rWord)) {
+        for (String rWord : resumeSet) {
+            if (!filterSet.contains(rWord) && jobSet.contains(rWord)) {
                 sameCoreWordCount++;
             }
         }
@@ -175,9 +185,16 @@ public class MatchCalculateService {
         return total;
     }
 
-    /**
-     * 主匹配方法（三参数）
-     */
+    // ==================== 辅助方法 ====================
+    private boolean containsAny(String text, String... keywords) {
+        String lower = text.toLowerCase();
+        for (String kw : keywords) {
+            if (lower.contains(kw)) return true;
+        }
+        return false;
+    }
+
+    // ==================== 主匹配方法 ====================
     public double calculateMatch(String jobText, String resumeText, String jobKeywordStr) {
         String cacheKey = "match_" + Objects.hash(jobText, resumeText, jobKeywordStr);
         Double cached = matchCache.get(cacheKey);
@@ -185,44 +202,43 @@ public class MatchCalculateService {
             return cached;
         }
 
-        // 向量化与相似度
+        // 1. 向量化
         Map<String, Double> jobVec = textToVector(jobText);
         Map<String, Double> resumeVec = textToVector(resumeText);
-        double baseSimilar = cosineSimilarity(jobVec, resumeVec);
-        double baseScore = baseSimilar * 70; // 基础分 0~70
 
-        // 加分
-        int extra = getExtraScore(jobText, resumeText, jobKeywordStr);
+        // 2. 余弦相似度
+        double baseSimilar = cosineSimilarity(jobVec, resumeVec);
+        double baseScore = baseSimilar * 75; // 基础分 0~75
+
+        // 3. 加分（含自动领域匹配）
+        int extra = getExtraScore(jobText, resumeText, jobKeywordStr, baseSimilar);
         double total = baseScore + extra;
 
-        // 跨赛道折损
-        total = applyCrossDomainPenalty(total, jobText, resumeText);
+        // 4. 跨赛道折损（基于相似度智能判断）
+        total = applyCrossDomainPenalty(total, jobText, resumeText, baseSimilar);
 
-        // 基础分极低时的兜底（≤30 分）
-        if (baseScore < 10) {
+        // 5. 基础分过低时的兜底（放宽至 20 分以下才封顶 30）
+        if (baseScore < 20) {
             total = Math.min(total, 30);
         }
 
-        // 全局封顶 95
+        // 6. 全局封顶 95
         total = Math.min(total, 95);
 
-        // 存入缓存
+        // 7. 存入缓存
         matchCache.put(cacheKey, total);
+        System.out.println("最终匹配分数：" + total);
         return total;
     }
 
-    /**
-     * 匹配等级判定
-     */
+    // ==================== 匹配等级判定 ====================
     public String getMatchLevel(double score) {
         if (score >= 70) return "高潜力";
         if (score >= 40) return "中潜力";
         return "低潜力";
     }
 
-    /**
-     * 清除缓存（重新计算时调用）
-     */
+    // ==================== 清除缓存 ====================
     public void clearCache(String jobText, String resumeText, String jobKeywordStr) {
         String cacheKey = "match_" + Objects.hash(jobText, resumeText, jobKeywordStr);
         matchCache.remove(cacheKey);
