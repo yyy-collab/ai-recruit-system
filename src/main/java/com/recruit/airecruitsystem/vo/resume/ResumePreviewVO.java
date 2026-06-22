@@ -6,5 +6,6 @@ import lombok.Data;
 public class ResumePreviewVO {
     private Integer resumeId;
     private String resumeFileName;
+    private String previewHtml;
     private String previewText;
 }

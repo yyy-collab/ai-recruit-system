@@ -154,6 +154,7 @@ public class ResumeServiceImpl implements ResumeService {
         vo.setResumeId(resume.getId());
         vo.setResumeFileName(resume.getFileName());
         vo.setPreviewText(buildOriginalPreviewText(resume));
+        vo.setPreviewHtml(buildOriginalPreviewHtml(resume));
         return ResultCode.SUCCESS;
     }
 
@@ -440,6 +441,80 @@ public class ResumeServiceImpl implements ResumeService {
         } catch (IOException e) {
             return buildPreviewText(buildSnapshot(resume));
         }
+    }
+
+    private String buildOriginalPreviewHtml(Resume resume) {
+        try {
+            String extension = resolveExtension(resume.getFileName());
+            if (!ALLOWED_EXTENSIONS.contains(extension)) {
+                extension = resolveExtension(resume.getFileUrl());
+            }
+
+            Path filePath = resolveStoredFilePath(resume.getFileUrl());
+            return resumeDocumentParser.extractPreviewHtml(filePath, extension, resume.getFileName());
+        } catch (IOException e) {
+            return wrapFallbackPreviewHtml(resume.getFileName());
+        }
+    }
+
+    private String wrapFallbackPreviewHtml(String fileName) {
+        String safeTitle = escapeHtml(StringUtils.hasText(fileName) ? fileName : "简历预览");
+        return """
+                <!DOCTYPE html>
+                <html lang="zh-CN">
+                <head>
+                  <meta charset="UTF-8" />
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                  <title>%s</title>
+                  <style>
+                    body {
+                      margin: 0;
+                      background: #eef2f7;
+                      color: #172033;
+                      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+                    }
+                    .page {
+                      box-sizing: border-box;
+                      max-width: 880px;
+                      margin: 24px auto;
+                      padding: 48px 56px;
+                      background: #ffffff;
+                      border-radius: 12px;
+                      box-shadow: 0 18px 46px rgba(23, 32, 51, 0.12);
+                    }
+                    .title {
+                      margin: 0 0 24px;
+                      padding-bottom: 16px;
+                      border-bottom: 1px solid #e5eaf1;
+                      font-size: 18px;
+                      font-weight: 700;
+                    }
+                    .content {
+                      line-height: 1.7;
+                      text-align: center;
+                      word-break: break-word;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <main class="page">
+                    <h1 class="title">%s</h1>
+                    <div class="content">当前原简历无法在线预览，请下载后查看原文件。</div>
+                  </main>
+                </body>
+                </html>
+                """.formatted(safeTitle, safeTitle);
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 
     private String buildPreviewText(ResumeAnalysisSnapshot snapshot) {

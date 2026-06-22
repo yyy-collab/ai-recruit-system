@@ -3,8 +3,18 @@ package com.recruit.airecruitsystem.service.resume;
 import com.recruit.airecruitsystem.model.ResumeAnalysisSnapshot;
 import org.apache.poi.hwpf.HWPFDocument;
 import org.apache.poi.hwpf.extractor.WordExtractor;
+import org.apache.poi.hwpf.usermodel.CharacterRun;
+import org.apache.poi.hwpf.usermodel.Paragraph;
+import org.apache.poi.hwpf.usermodel.Range;
+import org.apache.poi.xwpf.usermodel.BodyElementType;
+import org.apache.poi.xwpf.usermodel.IBodyElement;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableCell;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -53,6 +63,8 @@ public class ResumeDocumentParser {
             "产品设计", "需求分析", "用户研究", "项目管理", "Axure", "Figma", "墨刀"
     );
 
+    private static final String PREVIEW_FONT_STACK = "'Microsoft YaHei','SimSun','SimHei','FangSong','KaiTi','Arial'";
+
     public ResumeAnalysisSnapshot parse(Path file, String extension, String originalFileName) throws IOException {
         String text = normalizeText(extractText(file, extension));
         if (!StringUtils.hasText(text)) {
@@ -74,6 +86,15 @@ public class ResumeDocumentParser {
             throw new IOException("Apache POI未提取到简历文本");
         }
         return text;
+    }
+
+    public String extractPreviewHtml(Path file, String extension, String fileName) throws IOException {
+        String normalizedExtension = extension == null ? "" : extension.toLowerCase(Locale.ROOT);
+        return switch (normalizedExtension) {
+            case "docx" -> renderDocxHtml(file, fileName);
+            case "doc" -> renderDocHtml(file, fileName);
+            default -> wrapHtmlDocument(fileName, "<p>暂不支持该格式的在线预览</p>");
+        };
     }
 
     private String extractText(Path file, String extension) throws IOException {
@@ -100,6 +121,339 @@ public class ResumeDocumentParser {
              WordExtractor extractor = new WordExtractor(document)) {
             return extractor.getText();
         }
+    }
+
+    private String renderDocxHtml(Path file, String fileName) throws IOException {
+        try (InputStream inputStream = Files.newInputStream(file);
+             XWPFDocument document = new XWPFDocument(inputStream)) {
+            StringBuilder body = new StringBuilder();
+            for (IBodyElement element : document.getBodyElements()) {
+                if (element.getElementType() == BodyElementType.PARAGRAPH) {
+                    appendDocxParagraphHtml(body, (XWPFParagraph) element);
+                    continue;
+                }
+                if (element.getElementType() == BodyElementType.TABLE) {
+                    appendDocxTableHtml(body, (XWPFTable) element);
+                }
+            }
+            if (body.isEmpty()) {
+                body.append("<p>暂无可预览内容</p>");
+            }
+            return wrapHtmlDocument(fileName, body.toString());
+        }
+    }
+
+    private String renderDocHtml(Path file, String fileName) throws IOException {
+        try (InputStream inputStream = Files.newInputStream(file);
+             HWPFDocument document = new HWPFDocument(inputStream)) {
+            StringBuilder body = new StringBuilder();
+            Range range = document.getRange();
+            for (int i = 0; i < range.numParagraphs(); i++) {
+                appendDocParagraphHtml(body, range.getParagraph(i));
+            }
+            if (body.isEmpty()) {
+                body.append("<p>暂无可预览内容</p>");
+            }
+            return wrapHtmlDocument(fileName, body.toString());
+        }
+    }
+
+    private void appendDocxParagraphHtml(StringBuilder body, XWPFParagraph paragraph) {
+        StringBuilder text = new StringBuilder();
+        for (XWPFRun run : paragraph.getRuns()) {
+            String runText = run.text();
+            if (!StringUtils.hasText(runText)) {
+                continue;
+            }
+            text.append("<span style=\"")
+                    .append(buildDocxRunStyle(run))
+                    .append("\">")
+                    .append(escapeHtml(runText))
+                    .append("</span>");
+        }
+        if (text.isEmpty()) {
+            String fallbackText = paragraph.getText();
+            if (!StringUtils.hasText(fallbackText)) {
+                return;
+            }
+            text.append(escapeHtml(fallbackText));
+        }
+
+        body.append("<p style=\"")
+                .append(buildDocxParagraphStyle(paragraph))
+                .append("\">")
+                .append(text)
+                .append("</p>");
+    }
+
+    private void appendDocxTableHtml(StringBuilder body, XWPFTable table) {
+        body.append("<table style=\"")
+                .append(buildDocxTableStyle())
+                .append("\">");
+        for (XWPFTableRow row : table.getRows()) {
+            body.append("<tr>");
+            for (XWPFTableCell cell : row.getTableCells()) {
+                body.append("<td");
+                int colspan = resolveDocxGridSpan(cell);
+                if (colspan > 1) {
+                    body.append(" colspan=\"").append(colspan).append("\"");
+                }
+                body.append(" style=\"")
+                        .append(buildDocxTableCellStyle(cell))
+                        .append("\">");
+
+                StringBuilder cellContent = new StringBuilder();
+                for (XWPFParagraph paragraph : cell.getParagraphs()) {
+                    appendDocxParagraphHtml(cellContent, paragraph);
+                }
+                if (cellContent.isEmpty()) {
+                    cellContent.append("&nbsp;");
+                }
+                body.append(cellContent).append("</td>");
+            }
+            body.append("</tr>");
+        }
+        body.append("</table>");
+    }
+
+    private void appendDocParagraphHtml(StringBuilder body, Paragraph paragraph) {
+        StringBuilder text = new StringBuilder();
+        for (int i = 0; i < paragraph.numCharacterRuns(); i++) {
+            CharacterRun run = paragraph.getCharacterRun(i);
+            String runText = cleanDocRunText(run.text());
+            if (!StringUtils.hasText(runText)) {
+                continue;
+            }
+            text.append("<span style=\"")
+                    .append(buildDocRunStyle(run))
+                    .append("\">")
+                    .append(escapeHtml(runText))
+                    .append("</span>");
+        }
+        if (text.isEmpty()) {
+            String fallbackText = cleanDocRunText(paragraph.text());
+            if (!StringUtils.hasText(fallbackText)) {
+                return;
+            }
+            text.append(escapeHtml(fallbackText));
+        }
+
+        body.append("<p style=\"")
+                .append(buildParagraphStyle(mapDocAlignment(paragraph.getJustification()), 1.5))
+                .append("\">")
+                .append(text)
+                .append("</p>");
+    }
+
+    private String buildDocxRunStyle(XWPFRun run) {
+        StringBuilder style = new StringBuilder();
+        if (run.isBold()) {
+            style.append("font-weight:700;");
+        }
+        if (run.isItalic()) {
+            style.append("font-style:italic;");
+        }
+        if (StringUtils.hasText(run.getColor())) {
+            style.append("color:#").append(run.getColor()).append(';');
+        }
+        appendPreviewFontFamily(style, run.getFontFamily());
+        if (run.getFontSize() > 0) {
+            style.append("font-size:").append(run.getFontSize()).append("pt;");
+        }
+        return style.toString();
+    }
+
+    private String buildDocRunStyle(CharacterRun run) {
+        StringBuilder style = new StringBuilder();
+        if (run.isBold()) {
+            style.append("font-weight:700;");
+        }
+        if (run.isItalic()) {
+            style.append("font-style:italic;");
+        }
+        appendPreviewFontFamily(style, run.getFontName());
+        if (run.getFontSize() > 0) {
+            style.append("font-size:").append(run.getFontSize() / 2).append("pt;");
+        }
+        return style.toString();
+    }
+
+    private String buildDocxParagraphStyle(XWPFParagraph paragraph) {
+        StringBuilder style = new StringBuilder(buildParagraphStyle(
+                paragraph.getAlignment() == null ? null : paragraph.getAlignment().name(),
+                paragraph.getSpacingBetween() > 0 ? paragraph.getSpacingBetween() : 1.5
+        ));
+        appendTwipCss(style, "margin-left", paragraph.getIndentationLeft());
+        appendTwipCss(style, "margin-right", paragraph.getIndentationRight());
+        if (paragraph.getIndentationFirstLine() > 0) {
+            style.append("text-indent:")
+                    .append(toPointValue(paragraph.getIndentationFirstLine()))
+                    .append("pt;");
+        }
+        return style.toString();
+    }
+
+    private String buildDocxTableStyle() {
+        return "width:100%;"
+                + "margin:0 0 16px;"
+                + "border-collapse:collapse;"
+                + "table-layout:fixed;";
+    }
+
+    private String buildDocxTableCellStyle(XWPFTableCell cell) {
+        StringBuilder style = new StringBuilder("border:1px solid #dce3ef;padding:10px 12px;vertical-align:top;");
+        if (StringUtils.hasText(cell.getColor())) {
+            style.append("background:#").append(cell.getColor()).append(';');
+        }
+        return style.toString();
+    }
+
+    private int resolveDocxGridSpan(XWPFTableCell cell) {
+        var tcPr = cell.getCTTc().getTcPr();
+        if (tcPr == null || !tcPr.isSetGridSpan() || tcPr.getGridSpan() == null || tcPr.getGridSpan().getVal() == null) {
+            return 1;
+        }
+        return Math.max(1, tcPr.getGridSpan().getVal().intValue());
+    }
+
+    private void appendTwipCss(StringBuilder style, String property, int twips) {
+        if (twips <= 0) {
+            return;
+        }
+        style.append(property)
+                .append(':')
+                .append(toPointValue(twips))
+                .append("pt;");
+    }
+
+    private double toPointValue(int twips) {
+        return twips / 20.0;
+    }
+
+    private String buildParagraphStyle(String alignment, double lineHeight) {
+        String safeAlignment = switch (alignment == null ? "" : alignment.toUpperCase(Locale.ROOT)) {
+            case "CENTER" -> "center";
+            case "RIGHT" -> "right";
+            case "BOTH", "DISTRIBUTE" -> "justify";
+            default -> "left";
+        };
+        return "margin:0 0 12px;"
+                + "line-height:" + lineHeight + ";"
+                + "text-align:" + safeAlignment + ";"
+                + "white-space:pre-wrap;"
+                + "word-break:break-word;";
+    }
+
+    private String mapDocAlignment(int justification) {
+        return switch (justification) {
+            case 1 -> "CENTER";
+            case 2 -> "RIGHT";
+            case 3, 4, 5 -> "BOTH";
+            default -> "LEFT";
+        };
+    }
+
+    private String cleanDocRunText(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\u0007", "")
+                .replace("\r", "")
+                .replace("\u0000", "")
+                .trim();
+    }
+
+    private String wrapHtmlDocument(String fileName, String body) {
+        String safeTitle = escapeHtml(StringUtils.hasText(fileName) ? fileName : "简历预览");
+        return """
+                <!DOCTYPE html>
+                <html lang="zh-CN">
+                <head>
+                  <meta charset="UTF-8" />
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                  <title>%s</title>
+                  <style>
+                    body {
+                      margin: 0;
+                      background: #eef2f7;
+                      color: #172033;
+                      font-family: "Microsoft YaHei", "SimSun", "SimHei", "FangSong", "KaiTi", "Arial", sans-serif;
+                    }
+                    .page {
+                      box-sizing: border-box;
+                      max-width: 880px;
+                      margin: 24px auto;
+                      padding: 48px 56px;
+                      background: #ffffff;
+                      border-radius: 12px;
+                      box-shadow: 0 18px 46px rgba(23, 32, 51, 0.12);
+                    }
+                    .title {
+                      margin: 0 0 24px;
+                      padding-bottom: 16px;
+                      border-bottom: 1px solid #e5eaf1;
+                      font-size: 18px;
+                      font-weight: 700;
+                    }
+                    table {
+                      width: 100%%;
+                    }
+                    td p:last-child {
+                      margin-bottom: 0;
+                    }
+                  </style>
+                </head>
+                <body>
+                  <main class="page">
+                    <h1 class="title">%s</h1>
+                    %s
+                  </main>
+                </body>
+                </html>
+                """.formatted(safeTitle, safeTitle, body);
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;")
+                .replace("\n", "<br/>");
+    }
+
+    private void appendPreviewFontFamily(StringBuilder style, String originalFontFamily) {
+        style.append("font-family:").append(buildPreviewFontFamily(originalFontFamily)).append(';');
+    }
+
+    private String buildPreviewFontFamily(String originalFontFamily) {
+        if (!StringUtils.hasText(originalFontFamily)) {
+            return PREVIEW_FONT_STACK;
+        }
+
+        String escapedFont = "'" + escapeCssFontFamily(originalFontFamily.trim()) + "'";
+        String normalized = originalFontFamily.trim().toLowerCase(Locale.ROOT);
+        if (isLatinOnlyFont(normalized)) {
+            return PREVIEW_FONT_STACK + "," + escapedFont;
+        }
+        return escapedFont + "," + PREVIEW_FONT_STACK;
+    }
+
+    private boolean isLatinOnlyFont(String normalizedFontFamily) {
+        return normalizedFontFamily.equals("arial")
+                || normalizedFontFamily.equals("calibri")
+                || normalizedFontFamily.equals("cambria")
+                || normalizedFontFamily.equals("times new roman")
+                || normalizedFontFamily.equals("helvetica")
+                || normalizedFontFamily.equals("verdana")
+                || normalizedFontFamily.equals("tahoma");
+    }
+
+    private String escapeCssFontFamily(String value) {
+        return value.replace("\\", "\\\\").replace("'", "\\'");
     }
 
     private ResumeAnalysisSnapshot.BasicInfo extractBasicInfo(String text, String originalFileName) {
