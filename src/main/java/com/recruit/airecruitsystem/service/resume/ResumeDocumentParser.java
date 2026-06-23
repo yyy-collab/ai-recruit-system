@@ -33,23 +33,37 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Word简历文档解析服务
+ * 基于Apache POI实现doc/docx简历文件的全量解析能力
+ * 1. 提取纯文本内容，正则抽取基础信息、技能、工作经历，组装结构化快照ResumeAnalysisSnapshot
+ * 2. 生成可直接iframe渲染的HTML预览页面，保留原文档字体、加粗、颜色、表格样式
+ * 3. 内置行业技能词库、正则匹配规则，自动识别手机号、邮箱、年龄、工作时间段、院校、岗位等信息
+ */
 @Service
 public class ResumeDocumentParser {
 
+    // 手机号正则：匹配国内11位手机号，兼容+86、空格、横杠分隔格式
     private static final Pattern PHONE_PATTERN = Pattern.compile("(?<!\\d)(?:\\+?86[-\\s]?)?1[3-9]\\d(?:[-\\s]?\\d{4}){2}(?!\\d)");
+    // 邮箱正则：标准通用邮箱格式匹配
     private static final Pattern EMAIL_PATTERN = Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
+    // 年龄正则：匹配“年龄:25”、age 26这类文本
     private static final Pattern AGE_PATTERN = Pattern.compile("(?i)(?:年龄|age)\\s*[:：]?\\s*(1[6-9]|[2-5]\\d|6[0-5])\\s*(?:岁|周岁)?");
+    // 出生年月正则：匹配出生1998年03月，用于反推年龄
     private static final Pattern BIRTH_PATTERN = Pattern.compile("(?:出生(?:年月|日期)?|生日)\\s*[:：]?\\s*((?:19|20)\\d{2})(?:[年./-]\\s*(\\d{1,2}))?");
+    // 工作时间段正则：匹配 2020.03-至今、2018-2023 等任职区间
     private static final Pattern WORK_RANGE_PATTERN = Pattern.compile(
             "(?i)((?:19|20)\\d{2}(?:[.\\-/年]\\s*\\d{1,2})?\\s*(?:年|月)?\\s*(?:-|~|至|到|—|–)\\s*(?:(?:19|20)\\d{2}(?:[.\\-/年]\\s*\\d{1,2})?\\s*(?:年|月)?|至今|现在|present|current))"
     );
 
+    // 简历分段标题关键词，用于切分简历各模块（基本信息/教育/工作经历等）
     private static final List<String> SECTION_HEADERS = List.of(
             "基本信息", "个人信息", "求职意向", "教育经历", "教育背景", "专业技能", "技能专长",
             "核心技能", "工作经历", "工作经验", "实习经历", "项目经历", "项目经验", "自我评价",
             "个人评价", "荣誉奖项", "证书"
     );
 
+    // 行业技能词库：后端/前端/大数据/产品/运维等通用技术关键词，用于自动提取候选人技能
     private static final List<String> SKILL_DICTIONARY = List.of(
             "Java", "Spring Boot", "SpringBoot", "Spring Cloud", "MyBatis", "MySQL", "Redis",
             "Kafka", "RabbitMQ", "Elasticsearch", "Docker", "Kubernetes", "K8s", "Linux",
@@ -63,8 +77,17 @@ public class ResumeDocumentParser {
             "产品设计", "需求分析", "用户研究", "项目管理", "Axure", "Figma", "墨刀"
     );
 
+    // HTML预览页面默认字体栈，兼容Windows中文宋体、微软雅黑
     private static final String PREVIEW_FONT_STACK = "'Microsoft YaHei','SimSun','SimHei','FangSong','KaiTi','Arial'";
 
+    /**
+     * 完整解析简历文件，输出结构化快照对象
+     * @param file 简历本地文件路径
+     * @param extension 文件后缀 doc/docx
+     * @param originalFileName 用户原始上传文件名
+     * @return 结构化简历快照（基础信息、技能、工作经历、工作年限）
+     * @throws IOException 文件读取/文本提取失败抛出异常
+     */
     public ResumeAnalysisSnapshot parse(Path file, String extension, String originalFileName) throws IOException {
         String text = normalizeText(extractText(file, extension));
         if (!StringUtils.hasText(text)) {
@@ -80,6 +103,13 @@ public class ResumeDocumentParser {
                 .build();
     }
 
+    /**
+     * 提取简历纯文本，用于「解析后浏览」弹窗展示
+     * @param file 文件路径
+     * @param extension 文件后缀
+     * @return 清洗后的纯文本字符串
+     * @throws IOException 文件读取异常
+     */
     public String extractPreviewText(Path file, String extension) throws IOException {
         String text = normalizeText(extractText(file, extension));
         if (!StringUtils.hasText(text)) {
@@ -88,6 +118,14 @@ public class ResumeDocumentParser {
         return text;
     }
 
+    /**
+     * 生成简历HTML预览页面，保留原文档样式、表格、字体格式
+     * @param file 简历文件路径
+     * @param extension 文件后缀
+     * @param fileName 简历文件名
+     * @return 完整HTML页面字符串，可直接iframe加载
+     * @throws IOException 文件读取异常
+     */
     public String extractPreviewHtml(Path file, String extension, String fileName) throws IOException {
         String normalizedExtension = extension == null ? "" : extension.toLowerCase(Locale.ROOT);
         return switch (normalizedExtension) {
@@ -97,6 +135,13 @@ public class ResumeDocumentParser {
         };
     }
 
+    /**
+     * 根据文件后缀提取文档全部原始文本
+     * @param file 文件路径
+     * @param extension 文件后缀
+     * @return 原始未清洗文本
+     * @throws IOException 文件读取/格式不支持异常
+     */
     private String extractText(Path file, String extension) throws IOException {
         String normalizedExtension = extension == null ? "" : extension.toLowerCase(Locale.ROOT);
         return switch (normalizedExtension) {
@@ -107,6 +152,9 @@ public class ResumeDocumentParser {
         };
     }
 
+    /**
+     * 读取docx文档纯文本
+     */
     private String extractDocxText(Path file) throws IOException {
         try (InputStream inputStream = Files.newInputStream(file);
              XWPFDocument document = new XWPFDocument(inputStream);
@@ -115,6 +163,9 @@ public class ResumeDocumentParser {
         }
     }
 
+    /**
+     * 读取旧版doc文档纯文本
+     */
     private String extractDocText(Path file) throws IOException {
         try (InputStream inputStream = Files.newInputStream(file);
              HWPFDocument document = new HWPFDocument(inputStream);
@@ -123,6 +174,9 @@ public class ResumeDocumentParser {
         }
     }
 
+    /**
+     * 渲染docx文档为带样式HTML，包含段落、文字加粗/颜色、表格
+     */
     private String renderDocxHtml(Path file, String fileName) throws IOException {
         try (InputStream inputStream = Files.newInputStream(file);
              XWPFDocument document = new XWPFDocument(inputStream)) {
@@ -143,6 +197,9 @@ public class ResumeDocumentParser {
         }
     }
 
+    /**
+     * 渲染旧版doc文档为HTML段落
+     */
     private String renderDocHtml(Path file, String fileName) throws IOException {
         try (InputStream inputStream = Files.newInputStream(file);
              HWPFDocument document = new HWPFDocument(inputStream)) {
@@ -158,6 +215,9 @@ public class ResumeDocumentParser {
         }
     }
 
+    /**
+     * 将docx段落拼接为带行内样式的HTML span+p标签
+     */
     private void appendDocxParagraphHtml(StringBuilder body, XWPFParagraph paragraph) {
         StringBuilder text = new StringBuilder();
         for (XWPFRun run : paragraph.getRuns()) {
@@ -186,6 +246,9 @@ public class ResumeDocumentParser {
                 .append("</p>");
     }
 
+    /**
+     * 解析docx表格，生成完整table/tr/td HTML结构，支持单元格合并
+     */
     private void appendDocxTableHtml(StringBuilder body, XWPFTable table) {
         body.append("<table style=\"")
                 .append(buildDocxTableStyle())
@@ -216,6 +279,9 @@ public class ResumeDocumentParser {
         body.append("</table>");
     }
 
+    /**
+     * 旧版doc段落转HTML
+     */
     private void appendDocParagraphHtml(StringBuilder body, Paragraph paragraph) {
         StringBuilder text = new StringBuilder();
         for (int i = 0; i < paragraph.numCharacterRuns(); i++) {
@@ -245,6 +311,9 @@ public class ResumeDocumentParser {
                 .append("</p>");
     }
 
+    /**
+     * 构建docx文字片段行内样式：加粗、斜体、字体颜色、字号、字体
+     */
     private String buildDocxRunStyle(XWPFRun run) {
         StringBuilder style = new StringBuilder();
         if (run.isBold()) {
@@ -263,6 +332,9 @@ public class ResumeDocumentParser {
         return style.toString();
     }
 
+    /**
+     * 构建旧版doc文字片段样式
+     */
     private String buildDocRunStyle(CharacterRun run) {
         StringBuilder style = new StringBuilder();
         if (run.isBold()) {
@@ -278,6 +350,9 @@ public class ResumeDocumentParser {
         return style.toString();
     }
 
+    /**
+     * 构建docx段落全局样式：对齐、缩进、行高、边距
+     */
     private String buildDocxParagraphStyle(XWPFParagraph paragraph) {
         StringBuilder style = new StringBuilder(buildParagraphStyle(
                 paragraph.getAlignment() == null ? null : paragraph.getAlignment().name(),
@@ -293,6 +368,9 @@ public class ResumeDocumentParser {
         return style.toString();
     }
 
+    /**
+     * 表格全局基础样式
+     */
     private String buildDocxTableStyle() {
         return "width:100%;"
                 + "margin:0 0 16px;"
@@ -300,6 +378,9 @@ public class ResumeDocumentParser {
                 + "table-layout:fixed;";
     }
 
+    /**
+     * 单元格样式：边框、内边距、背景色、垂直对齐
+     */
     private String buildDocxTableCellStyle(XWPFTableCell cell) {
         StringBuilder style = new StringBuilder("border:1px solid #dce3ef;padding:10px 12px;vertical-align:top;");
         if (StringUtils.hasText(cell.getColor())) {
@@ -308,14 +389,20 @@ public class ResumeDocumentParser {
         return style.toString();
     }
 
+    /**
+     * 获取单元格合并列数
+     */
     private int resolveDocxGridSpan(XWPFTableCell cell) {
         var tcPr = cell.getCTTc().getTcPr();
-        if (tcPr == null || !tcPr.isSetGridSpan() || tcPr.getGridSpan() == null || tcPr.getGridSpan().getVal() == null) {
+        if (tcPr == null || !tcPr.isSetGridSpan() || tcPr.getGridSpan().getVal() == null) {
             return 1;
         }
         return Math.max(1, tcPr.getGridSpan().getVal().intValue());
     }
 
+    /**
+     * Twip单位转pt（Word内部单位，1pt=20twip），拼接CSS边距样式
+     */
     private void appendTwipCss(StringBuilder style, String property, int twips) {
         if (twips <= 0) {
             return;
@@ -326,10 +413,16 @@ public class ResumeDocumentParser {
                 .append("pt;");
     }
 
+    /**
+     * twip转pt像素单位
+     */
     private double toPointValue(int twips) {
         return twips / 20.0;
     }
 
+    /**
+     * 通用段落基础样式：对齐、行高、自动换行
+     */
     private String buildParagraphStyle(String alignment, double lineHeight) {
         String safeAlignment = switch (alignment == null ? "" : alignment.toUpperCase(Locale.ROOT)) {
             case "CENTER" -> "center";
@@ -344,6 +437,9 @@ public class ResumeDocumentParser {
                 + "word-break:break-word;";
     }
 
+    /**
+     * 旧版doc对齐枚举转字符串
+     */
     private String mapDocAlignment(int justification) {
         return switch (justification) {
             case 1 -> "CENTER";
@@ -353,6 +449,9 @@ public class ResumeDocumentParser {
         };
     }
 
+    /**
+     * 清理doc文档特殊不可见控制字符
+     */
     private String cleanDocRunText(String value) {
         if (value == null) {
             return "";
@@ -363,6 +462,9 @@ public class ResumeDocumentParser {
                 .trim();
     }
 
+    /**
+     * 封装完整HTML页面模板，统一页面样式、布局
+     */
     private String wrapHtmlDocument(String fileName, String body) {
         String safeTitle = escapeHtml(StringUtils.hasText(fileName) ? fileName : "简历预览");
         return """
@@ -413,6 +515,9 @@ public class ResumeDocumentParser {
                 """.formatted(safeTitle, safeTitle, body);
     }
 
+    /**
+     * HTML特殊字符转义，防止XSS注入、标签错乱
+     */
     private String escapeHtml(String value) {
         if (value == null) {
             return "";
@@ -425,10 +530,16 @@ public class ResumeDocumentParser {
                 .replace("\n", "<br/>");
     }
 
+    /**
+     * 拼接字体CSS字符串，优先文档原字体，兜底系统中文字体栈
+     */
     private void appendPreviewFontFamily(StringBuilder style, String originalFontFamily) {
         style.append("font-family:").append(buildPreviewFontFamily(originalFontFamily)).append(';');
     }
 
+    /**
+     * 组合字体优先级：中文文档优先原中文字体，英文文档优先系统英文字体
+     */
     private String buildPreviewFontFamily(String originalFontFamily) {
         if (!StringUtils.hasText(originalFontFamily)) {
             return PREVIEW_FONT_STACK;
@@ -442,6 +553,9 @@ public class ResumeDocumentParser {
         return escapedFont + "," + PREVIEW_FONT_STACK;
     }
 
+    /**
+     * 判断字体是否纯英文字体
+     */
     private boolean isLatinOnlyFont(String normalizedFontFamily) {
         return normalizedFontFamily.equals("arial")
                 || normalizedFontFamily.equals("calibri")
@@ -452,10 +566,21 @@ public class ResumeDocumentParser {
                 || normalizedFontFamily.equals("tahoma");
     }
 
+    /**
+     * CSS字体名称转义单引号
+     */
     private String escapeCssFontFamily(String value) {
         return value.replace("\\", "\\\\").replace("'", "\\'");
     }
 
+    // ====================== 简历文本结构化抽取核心方法 ======================
+
+    /**
+     * 抽取基础信息实体（姓名、手机、邮箱、年龄、学历、院校）
+     * @param text 简历全文文本
+     * @param originalFileName 原始文件名（用于兜底提取姓名）
+     * @return 基础信息BO
+     */
     private ResumeAnalysisSnapshot.BasicInfo extractBasicInfo(String text, String originalFileName) {
         return ResumeAnalysisSnapshot.BasicInfo.builder()
                 .realName(firstText(
@@ -471,6 +596,9 @@ public class ResumeDocumentParser {
                 .build();
     }
 
+    /**
+     * 正则匹配提取手机号
+     */
     private String extractPhone(String text) {
         Matcher matcher = PHONE_PATTERN.matcher(text);
         if (!matcher.find()) {
@@ -480,11 +608,17 @@ public class ResumeDocumentParser {
         return digits.startsWith("86") && digits.length() == 13 ? digits.substring(2) : digits;
     }
 
+    /**
+     * 正则匹配提取邮箱
+     */
     private String extractEmail(String text) {
         Matcher matcher = EMAIL_PATTERN.matcher(text);
         return matcher.find() ? matcher.group() : null;
     }
 
+    /**
+     * 提取年龄：优先直接年龄字段，无则通过出生年月反推
+     */
     private Integer extractAge(String text) {
         Matcher ageMatcher = AGE_PATTERN.matcher(text);
         if (ageMatcher.find()) {
@@ -506,6 +640,9 @@ public class ResumeDocumentParser {
         return age >= 16 && age <= 65 ? age : null;
     }
 
+    /**
+     * 提取学历：博士/硕士/本科/专科
+     */
     private String extractEducation(String text) {
         String labeled = findLabeledValue(text, "学历", "最高学历", "教育程度", "Education");
         String normalized = normalizeEducation(labeled);
@@ -518,6 +655,9 @@ public class ResumeDocumentParser {
         return normalized != null ? normalized : normalizeEducation(text);
     }
 
+    /**
+     * 统一标准化学历文本
+     */
     private String normalizeEducation(String value) {
         if (!StringUtils.hasText(value)) {
             return null;
@@ -537,6 +677,9 @@ public class ResumeDocumentParser {
         return null;
     }
 
+    /**
+     * 提取毕业院校名称
+     */
     private String extractSchool(String text) {
         String labeled = findLabeledValue(text, "毕业院校", "毕业学校", "学校", "院校", "School");
         String school = findSchoolName(labeled);
@@ -549,6 +692,9 @@ public class ResumeDocumentParser {
         return school != null ? school : findSchoolName(text);
     }
 
+    /**
+     * 正则匹配大学/学院名称
+     */
     private String findSchoolName(String text) {
         if (!StringUtils.hasText(text)) {
             return null;
@@ -560,6 +706,9 @@ public class ResumeDocumentParser {
         return cleanValue(matcher.group(1));
     }
 
+    /**
+     * 提取总工作年限文本
+     */
     private String extractWorkExperience(String text) {
         Matcher labeledMatcher = Pattern.compile(
                 "(?:工作年限|工作经验|从业年限|经验年限)\\s*[:：]?\\s*([^\\n，,；;]{1,24})"
@@ -580,6 +729,9 @@ public class ResumeDocumentParser {
         return calculatedYears == null ? null : calculatedYears + "年";
     }
 
+    /**
+     * 标准化工作年限字符串
+     */
     private String normalizeWorkExperience(String value) {
         if (!StringUtils.hasText(value)) {
             return null;
@@ -588,6 +740,9 @@ public class ResumeDocumentParser {
         return matcher.find() ? matcher.group(1).replaceAll("\\s+", "") : null;
     }
 
+    /**
+     * 全文提取技能列表（词库匹配+技能段落抽取）
+     */
     private List<String> extractSkills(String text) {
         LinkedHashSet<String> skills = new LinkedHashSet<>();
         addDictionarySkills(skills, text);
@@ -604,6 +759,9 @@ public class ResumeDocumentParser {
         return limitList(new ArrayList<>(skills), 40);
     }
 
+    /**
+     * 匹配内置技能词库，存入集合去重
+     */
     private void addDictionarySkills(Set<String> skills, String text) {
         String lowerText = text.toLowerCase(Locale.ROOT);
         for (String skill : SKILL_DICTIONARY) {
@@ -613,6 +771,9 @@ public class ResumeDocumentParser {
         }
     }
 
+    /**
+     * 清洗技能关键词，去掉“精通/熟练掌握”等前缀修饰词
+     */
     private String cleanSkillToken(String value) {
         if (!StringUtils.hasText(value)) {
             return null;
@@ -623,6 +784,9 @@ public class ResumeDocumentParser {
                 .trim();
     }
 
+    /**
+     * 过滤无效文本，判断是否为有效技能名词
+     */
     private boolean looksLikeSkill(String value) {
         if (!StringUtils.hasText(value)) {
             return false;
@@ -633,6 +797,9 @@ public class ResumeDocumentParser {
         return !value.matches(".*(负责|项目|经历|经验|公司|岗位|职位|描述|以上|以下).*");
     }
 
+    /**
+     * 拆分全文，提取多条工作经历明细
+     */
     private List<ResumeAnalysisSnapshot.WorkHistoryItem> extractWorkHistory(String text, List<String> resumeSkills) {
         String workSection = findSection(text, "工作经历|工作经验|实习经历");
         String source = StringUtils.hasText(workSection) ? workSection : text;
@@ -654,6 +821,9 @@ public class ResumeDocumentParser {
         return limitList(items, 10);
     }
 
+    /**
+     * 单段工作经历文本解析为WorkHistoryItem实体
+     */
     private ResumeAnalysisSnapshot.WorkHistoryItem parseWorkHistoryBlock(String block, String dateRange, List<String> resumeSkills) {
         if (!StringUtils.hasText(block)) {
             return null;
@@ -687,6 +857,9 @@ public class ResumeDocumentParser {
                 .build();
     }
 
+    /**
+     * 提取单段工作经历中用到的核心技能
+     */
     private List<String> extractCoreSkills(String block, List<String> resumeSkills) {
         LinkedHashSet<String> coreSkills = new LinkedHashSet<>();
         String lowerBlock = block.toLowerCase(Locale.ROOT);
@@ -699,6 +872,9 @@ public class ResumeDocumentParser {
         return limitList(new ArrayList<>(coreSkills), 8);
     }
 
+    /**
+     * 全文匹配所有任职时间区间，记录起止下标与文本
+     */
     private List<MatcherMatch> findDateRangeMatches(String text) {
         List<MatcherMatch> matches = new ArrayList<>();
         Matcher matcher = WORK_RANGE_PATTERN.matcher(text);
@@ -708,6 +884,9 @@ public class ResumeDocumentParser {
         return matches;
     }
 
+    /**
+     * 根据最早入职年份，计算总工作年限
+     */
     private Integer calculateYearsFromDateRanges(String text) {
         Matcher matcher = WORK_RANGE_PATTERN.matcher(text);
         Integer earliestYear = null;
@@ -724,16 +903,25 @@ public class ResumeDocumentParser {
         return Math.max(0, LocalDate.now().getYear() - earliestYear);
     }
 
+    /**
+     * 正则提取公司名称
+     */
     private String findCompanyName(String detail) {
         Matcher matcher = Pattern.compile("([\\u4e00-\\u9fa5A-Za-z0-9（）()·.\\s]{2,50}(?:公司|集团|科技|银行|中心|研究院|工作室|Ltd|Inc|LLC))").matcher(detail);
         return matcher.find() ? cleanValue(matcher.group(1)) : null;
     }
 
+    /**
+     * 正则匹配常见岗位名称
+     */
     private String findPositionName(String detail) {
         Matcher matcher = Pattern.compile("(Java开发工程师|后端开发工程师|前端开发工程师|全栈开发工程师|测试工程师|算法工程师|数据分析师|产品经理|项目经理|运营经理|设计师|工程师|经理|主管|实习生)").matcher(detail);
         return matcher.find() ? matcher.group(1) : null;
     }
 
+    /**
+     * 剔除公司、岗位名称，生成工作描述文本
+     */
     private String buildDescription(String detail, String company, String position) {
         String description = detail;
         if (StringUtils.hasText(company)) {
@@ -751,6 +939,9 @@ public class ResumeDocumentParser {
         return description.length() > 500 ? description.substring(0, 500) : description;
     }
 
+    /**
+     * 根据章节标题正则，截取对应模块完整文本（如工作经历、教育经历）
+     */
     private String findSection(String text, String headerRegex) {
         Matcher startMatcher = Pattern.compile("(?im)^\\s*(?:" + headerRegex + ")\\s*[:：]?\\s*$").matcher(text);
         if (!startMatcher.find()) {
@@ -770,6 +961,9 @@ public class ResumeDocumentParser {
         return text.substring(start, end).trim();
     }
 
+    /**
+     * 匹配「标签:值」格式文本，提取冒号后内容
+     */
     private String findLabeledValue(String text, String... labels) {
         if (!StringUtils.hasText(text)) {
             return null;
@@ -779,6 +973,9 @@ public class ResumeDocumentParser {
         return matcher.find() ? cleanValue(matcher.group(1)) : null;
     }
 
+    /**
+     * 从上传文件名中提取中文姓名
+     */
     private String extractNameFromFileName(String originalFileName) {
         if (!StringUtils.hasText(originalFileName)) {
             return null;
@@ -794,6 +991,9 @@ public class ResumeDocumentParser {
         return null;
     }
 
+    /**
+     * 从简历前8行文本提取姓名
+     */
     private String extractNameFromFirstLines(String text) {
         String[] lines = text.split("\\R");
         for (int i = 0; i < Math.min(lines.length, 8); i++) {
@@ -805,6 +1005,9 @@ public class ResumeDocumentParser {
         return null;
     }
 
+    /**
+     * 判断文本是否符合中文姓名格式（2-4个汉字，不含简历关键词）
+     */
     private boolean looksLikeChineseName(String value) {
         if (!StringUtils.hasText(value)) {
             return false;
@@ -816,6 +1019,9 @@ public class ResumeDocumentParser {
         return !compact.matches(".*(简历|个人|姓名|求职|应聘|电话|邮箱|学校|大学|学院|工作|项目|技能).*");
     }
 
+    /**
+     * 清洗日期文本，统一格式为2022.03
+     */
     private String cleanDate(String value) {
         return cleanValue(value)
                 .replace("年", ".")
@@ -824,6 +1030,9 @@ public class ResumeDocumentParser {
                 .replaceAll("\\.$", "");
     }
 
+    /**
+     * 通用文本清洗：全角空格、制表符、首尾标点、多余空格
+     */
     private String cleanValue(String value) {
         if (value == null) {
             return null;
@@ -835,6 +1044,9 @@ public class ResumeDocumentParser {
                 .trim();
     }
 
+    /**
+     * 全文文本标准化：统一换行、去除多余空行、合并空白符
+     */
     private String normalizeText(String text) {
         if (text == null) {
             return "";
@@ -848,6 +1060,9 @@ public class ResumeDocumentParser {
                 .trim();
     }
 
+    /**
+     * 多值取第一个非空有效值
+     */
     @SafeVarargs
     private final <T> T firstText(T... values) {
         for (T value : values) {
@@ -862,6 +1077,9 @@ public class ResumeDocumentParser {
         return null;
     }
 
+    /**
+     * 列表截断，限制最大长度，避免数据过多
+     */
     private <T> List<T> limitList(List<T> values, int limit) {
         if (values.size() <= limit) {
             return values;
@@ -869,6 +1087,9 @@ public class ResumeDocumentParser {
         return new ArrayList<>(values.subList(0, limit));
     }
 
+    /**
+     * 正则匹配结果内部记录类：存储匹配起始下标、结束下标、匹配文本
+     */
     private record MatcherMatch(int start, int end, String value) {
     }
 }

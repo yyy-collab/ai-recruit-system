@@ -22,6 +22,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
+/**
+ * 简历模块前端求职者接口控制器
+ * 提供求职者简历上传、列表查询、AI解析详情、预览、删除、重新解析接口
+ * 统一通过JWT从请求头获取当前登录求职者ID，校验操作归属权限
+ */
 @RestController
 @RequestMapping("/resume")
 public class ResumeController {
@@ -32,11 +37,17 @@ public class ResumeController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    /**
+     * 简历上传接口
+     */
     @PostMapping("/upload")
     public Result<ResumeSummaryVO> uploadResume(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        // 从token中获取当前登录求职者ID
         Integer seekerId = jwtUtil.getUserIdFromRequest(request);
         ResumeSummaryVO vo = new ResumeSummaryVO();
+        // 调用业务层执行上传逻辑
         int code = resumeService.uploadResume(seekerId, file, vo);
+        // 根据业务返回码封装统一响应信息
         return switch (code) {
             case ResultCode.SUCCESS -> Result.success("简历上传成功", vo);
             case ResultCode.INFO_INCOMPLETE -> Result.error(ResultCode.INFO_INCOMPLETE, "请先完善真实姓名、电话和邮箱后再上传简历");
@@ -47,12 +58,20 @@ public class ResumeController {
         };
     }
 
+    /**
+     * 查询当前求职者本人全部简历列表
+     */
     @GetMapping("/myList")
     public Result<List<ResumeSummaryVO>> getMyResumeList(HttpServletRequest request) {
         Integer seekerId = jwtUtil.getUserIdFromRequest(request);
-        return Result.success("操作成功", resumeService.getMyResumeList(seekerId));
+        List<ResumeSummaryVO> resumeList = resumeService.getMyResumeList(seekerId);
+        return Result.success("操作成功", resumeList);
     }
 
+    /**
+     * 获取简历AI结构化解析详情接口
+     * 前端智能简历中心页面数据源，用于渲染简历质量评分、技能雷达图
+     */
     @GetMapping("/ai/detail")
     public Result<ResumeAiDetailVO> getResumeAiDetail(@RequestParam("resume_id") Integer resumeId,
                                                       HttpServletRequest request) {
@@ -68,6 +87,10 @@ public class ResumeController {
         };
     }
 
+    /**
+     * 原简历文件预览接口
+     * 返回Word原文提取的纯文本、可嵌入iframe的HTML预览页面
+     */
     @GetMapping("/preview")
     public Result<ResumePreviewVO> previewResume(@RequestParam("resume_id") Integer resumeId,
                                                  HttpServletRequest request) {
@@ -79,6 +102,10 @@ public class ResumeController {
                 : Result.error(code, code == ResultCode.NOT_FOUND ? "简历不存在" : "获取简历预览失败");
     }
 
+    /**
+     * 删除简历接口
+     * 限制：已存在投递记录的简历不可删除，同时删除本地文件、解析记录、简历主记录
+     */
     @DeleteMapping("/delete")
     public Result<Void> deleteResume(@RequestParam("resume_id") Integer resumeId, HttpServletRequest request) {
         Integer seekerId = jwtUtil.getUserIdFromRequest(request);
@@ -91,6 +118,9 @@ public class ResumeController {
         };
     }
 
+    /**
+     * 简历重新解析接口
+     */
     @PostMapping("/ai/reparse")
     public Result<ResumeSummaryVO> reparseResume(@Valid @RequestBody ResumeReparseRequest request,
                                                  HttpServletRequest httpRequest) {
